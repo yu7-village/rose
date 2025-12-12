@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>SkyWay Video Room</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <h1>SkyWay Video Room</h1>
+  <button id="join">入室</button>
+  <button id="leave">退出</button>
+  <button id="mute">ミュート</button>
+  <div>
+    <video id="local" autoplay muted playsinline></video>
+    <video id="remote" autoplay playsinline></video>
+  </div>
+  <!-- Viteでは必ず type="module" -->
+  <script type="module" src="/script.js"></script>
+</body>
+</html>

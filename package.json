@@ -1,0 +1,26 @@
+{
+  "name": "rose",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@skyway-sdk/core": "^2.2.0",
+    "@skyway-sdk/room": "^2.2.0",
+    "@skyway-sdk/token": "^2.0.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "vite": "^7.2.7"
+  }
+}
