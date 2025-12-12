@@ -1,13 +1,12 @@
 const express = require('express');
-const cors = require('cors');
+
 const { SkyWayAuthToken, RoomScope, MemberScope, uuidV4 } = require('@skyway-sdk/token');
 require('dotenv').config();
 
 const app = express();   // ← ここで app を定義
-const PORT = 3000;
 
-// CORS を許可（ローカル開発用）
-app.use(cors());
+const PORT = process.env.PORT || 3000;
+
 
 // トークン生成 API
 app.get('/token', (req, res) => {
