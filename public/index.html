@@ -3,50 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkyWay P2P ルーム (rose)</title>
+    <title>SkyWay P2P ビデオ通話 (rose)</title>
     
     <script type="importmap">
     {
       "imports": {
-        // コア機能
         "@skyway-sdk/room": "/node_modules/@skyway-sdk/room/dist/index.js",
-        // メディア関連機能（roomパッケージのサブパスを指す）
-        "@skyway-sdk/media": "/node_modules/@skyway-sdk/room/dist/media/index.js"
+        "@skyway-sdk/core": "/node_modules/@skyway-sdk/core/dist/index.js"
       }
     }
     </script>
 
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            text-align: center;
-        }
-        #videos {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        video {
-            width: 45%;
-            max-width: 400px;
-            height: auto;
-            border: 1px solid #ccc;
-            background-color: #000;
-        }
-        #controls button {
-            padding: 10px 20px;
-            margin: 5px;
-            cursor: pointer;
-        }
-        #remote-media-container {
-            width: 45%;
-            max-width: 400px;
-            min-height: 200px;
-            border: 1px solid #ccc;
-            background-color: #000;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
+        #videos { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }
+        video { width: 45%; max-width: 400px; height: auto; border: 1px solid #ccc; background-color: #000; }
+        #controls button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        #remote-media-container { width: 45%; max-width: 400px; min-height: 200px; border: 1px solid #ccc; background-color: #000; }
     </style>
 </head>
 <body>

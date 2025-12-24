@@ -1,7 +1,7 @@
 {
   "name": "rose-skyway-p2p-app",
   "version": "1.0.0",
-  "description": "SkyWay v3 P2P application using server-side token generation.",
+  "description": "SkyWay v3 P2P application with server-side token generation.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -17,6 +17,7 @@
   "dependencies": {
     "express": "^5.2.1",
     "@skyway-sdk/room": "^2.2.1",
-    "@skyway-sdk/token": "^2.0.2" 
+    "@skyway-sdk/token": "^2.0.2", 
+    "@skyway-sdk/core": "^2.2.1" 
   }
 }

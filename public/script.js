@@ -1,8 +1,8 @@
 // public/script.js
 
-// Import Mapでマッピングしたモジュールからインポート
+// 修正済み：SkyWayStreamFactoryを @skyway-sdk/core からインポート
 import { SkyWayContext, SkyWayRoom } from '@skyway-sdk/room'; 
-import { LocalVideoStream, LocalAudioStream } from '@skyway-sdk/media'; 
+import { SkyWayStreamFactory } from '@skyway-sdk/core';
 
 
 // =========================================================
@@ -20,7 +20,7 @@ const roomNameDisplay = document.getElementById('room-name-display');
 // =========================================================
 let context = null;
 let room = null;
-let localStreams = []; // ローカルの映像と音声ストリームを保持
+let localStreams = []; 
 
 
 // =========================================================
@@ -29,7 +29,6 @@ let localStreams = []; // ローカルの映像と音声ストリームを保持
 
 /**
  * サーバーから認証トークンを取得する
- * @returns {Promise<{appId: string, token: string, peerId: string}>}
  */
 async function fetchSkyWayToken() {
     try {
@@ -40,7 +39,7 @@ async function fetchSkyWayToken() {
         return response.json();
     } catch (error) {
         console.error('トークン取得エラー:', error);
-        alert('トークンの取得に失敗しました。サーバーが起動しているか、環境変数が設定されているか確認してください。');
+        alert('トークンの取得に失敗しました。サーバー側の設定を確認してください。');
         return null;
     }
 }
@@ -63,27 +62,26 @@ async function joinRoom() {
         return;
     }
 
-    // ボタンの状態を更新
+    // UI更新
     joinButton.disabled = true;
     roomIdInput.disabled = true;
     
     try {
-        // 1. ローカルストリーム（カメラとマイク）の取得
-        const videoStream = await LocalVideoStream.Capture(); 
-        const audioStream = await LocalAudioStream.Capture();
+        // 1. ローカルストリーム（カメラとマイク）の取得 (coreパッケージのFactoryを使用)
+        const videoStream = await SkyWayStreamFactory.createCameraStream(); 
+        const audioStream = await SkyWayStreamFactory.createMicrophoneStream();
         
         localStreams = [videoStream, audioStream];
 
         // ローカル映像をDOMにアタッチ
         videoStream.attach(localVideo);
 
-        // 2. Contextの作成 (App IDと認証トークンを使用)
+        // 2. Contextの作成 (App IDを使用)
         context = await SkyWayContext.Create({ 
             appId: config.appId, 
             rtcConfig: {
-                iceServers: [{ urls: 'stun:stun.skyway.io:3478' }] // STUN/TURN サーバー設定
+                iceServers: [{ urls: 'stun:stun.skyway.io:3478' }] 
             },
-            // P2Pの場合、トークンはContext作成時には不要
         });
 
 
@@ -91,7 +89,6 @@ async function joinRoom() {
         room = await SkyWayRoom.FindOrCreate(context, {
             name: roomId,
             type: 'p2p', // P2P ルーム
-            // トークンを接続時に提供
             token: config.token 
         });
 
@@ -109,7 +106,7 @@ async function joinRoom() {
 
     } catch (error) {
         console.error('ルーム入室中にエラーが発生しました:', error);
-        alert('ルーム入室に失敗しました。ブラウザのカメラ・マイクへのアクセスを許可しているか、サーバー側の設定を確認してください。');
+        alert('ルーム入室に失敗しました。ブラウザのカメラ・マイクへのアクセスを許可しているか、サーバー設定を確認してください。');
         cleanup();
     }
 }
@@ -125,7 +122,7 @@ function setupRoomEventListeners() {
         console.log(`ピア ${peer.id} が参加しました。`);
         
         // 参加したピアにローカルストリームを公開
-        const publication = await room.publish({ streams: localStreams });
+        await room.publish({ streams: localStreams });
         
         // リモートピアのストリームが公開されたとき
         peer.onStreamPublished.add(async ({ publication }) => {
@@ -134,16 +131,17 @@ function setupRoomEventListeners() {
             // ストリームを購読
             const subscribedStream = await room.subscribe(publication.id);
 
-            // 映像ストリームであればDOMに追加
-            if (subscribedStream instanceof LocalVideoStream || subscribedStream instanceof LocalAudioStream) {
+            // ストリームタイプをチェック
+            if (subscribedStream.contentType === 'video' || subscribedStream.contentType === 'audio') {
                  const remoteVideo = document.createElement('video');
                  remoteVideo.autoplay = true;
                  remoteVideo.playsInline = true;
                  remoteVideo.controls = true; 
+                 remoteVideo.id = `remote-video-${publication.publisher.id}`;
                  
                  subscribedStream.attach(remoteVideo);
                  remoteMediaContainer.appendChild(remoteVideo);
-                 console.log(`リモートピア ${peer.id} のストリームを購読し、表示しました。`);
+                 console.log(`リモートピア ${publication.publisher.id} のストリームを購読し、表示しました。`);
             }
         });
     });
@@ -151,8 +149,10 @@ function setupRoomEventListeners() {
     // ピアが退出したとき
     room.onPeerLeft.add(({ peerId }) => {
         console.log(`ピア ${peerId} が退出しました。`);
-        // リモートメディアをクリア
-        remoteMediaContainer.innerHTML = '<h2>相手</h2>';
+        const videoEl = document.getElementById(`remote-video-${peerId}`);
+        if (videoEl) {
+             remoteMediaContainer.removeChild(videoEl);
+        }
     });
 
     // ルームが閉じられたとき
@@ -167,19 +167,22 @@ function setupRoomEventListeners() {
  * 接続切断後のリソース解放とUIリセット
  */
 function cleanup() {
-    if (localStreams.length > 0) {
-        localStreams.forEach(stream => {
+    // ストリームの停止
+    localStreams.forEach(stream => {
+        if (stream.track) {
             stream.track.stop();
-        });
-        localStreams = [];
-    }
+        }
+    });
+    localStreams = [];
 
+    // ルームのクローズ
     if (room) {
         room.close();
         room = null;
     }
     context = null;
 
+    // DOMのリセット
     localVideo.srcObject = null;
     remoteMediaContainer.innerHTML = '<h2>相手</h2>';
     

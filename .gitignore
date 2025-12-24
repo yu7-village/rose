@@ -1,0 +1,9 @@
+# .gitignore の内容
+
+# node_modules ディレクトリをGitのトラッキング対象から除外する
+node_modules/
+
+# OSやエディタの一時ファイルを無視
+.DS_Store
+*.log
+npm-debug.log*
