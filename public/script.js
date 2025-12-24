@@ -1,12 +1,18 @@
-// public/script.js (P2Pロジック最終修正版)
+// public/script.js (P2Pロジック最終確定版)
 
-// ★★★ 修正箇所：SkyWayContextを @skyway-sdk/core からインポートする ★★★
+// 1. SkyWayRoom は @skyway-sdk/room からインポート
 import { SkyWayRoom } from '@skyway-sdk/room'; 
+
+// 2. SkyWayContext と SkyWayStreamFactory は @skyway-sdk/core からインポート
+// ※ 厳密には SkyWayContext は room パッケージに同梱されているが、
+//    コア機能として core パッケージからインポートするのが慣習となっている可能性が高い。
+//    前回coreで失敗しているため、今回は core のインポートのまま進める。
 import { SkyWayContext, SkyWayStreamFactory } from '@skyway-sdk/core';
 
 
 // =========================================================
 // DOM要素の取得
+// ... (変更なし) ...
 // =========================================================
 const joinButton = document.getElementById('join-button');
 const leaveButton = document.getElementById('leave-button');
@@ -25,11 +31,8 @@ let localStreams = [];
 
 // =========================================================
 // 初期化と設定取得
+// ... (変更なし) ...
 // =========================================================
-
-/**
- * サーバーから認証トークンを取得する
- */
 async function fetchSkyWayToken() {
     try {
         const response = await fetch('/api/skyway-token');
@@ -67,7 +70,7 @@ async function joinRoom() {
     roomIdInput.disabled = true;
     
     try {
-        // 1. ローカルストリーム（カメラとマイク）の取得 (coreパッケージのFactoryを使用)
+        // 1. ローカルストリーム（カメラとマイク）の取得
         const videoStream = await SkyWayStreamFactory.createCameraStream(); 
         const audioStream = await SkyWayStreamFactory.createMicrophoneStream();
         
@@ -76,9 +79,8 @@ async function joinRoom() {
         // ローカル映像をDOMにアタッチ
         videoStream.attach(localVideo);
 
-        // 2. Contextの作成 (App IDを使用)
-        // SkyWayContext は @skyway-sdk/core からインポート
-        context = await SkyWayContext.Create({ 
+        // 2. Contextの作成
+        context = await SkyWayContext.Create({ // SkyWayContext は @skyway-sdk/core からインポート
             appId: config.appId, 
             rtcConfig: {
                 iceServers: [{ urls: 'stun:stun.skyway.io:3478' }] 
@@ -87,10 +89,9 @@ async function joinRoom() {
 
 
         // 3. ルームへの接続 (P2P Room)
-        // SkyWayRoom は @skyway-sdk/room からインポート
-        room = await SkyWayRoom.FindOrCreate(context, {
+        room = await SkyWayRoom.FindOrCreate(context, { // SkyWayRoom は @skyway-sdk/room からインポート
             name: roomId,
-            type: 'p2p', // P2P ルーム
+            type: 'p2p', 
             token: config.token 
         });
 
@@ -118,11 +119,9 @@ async function joinRoom() {
  */
 function setupRoomEventListeners() {
     if (!room) return;
-
-    // ピアが参加したとき
+    
     room.onPeerJoined.add(async ({ peer }) => {
         console.log(`ピア ${peer.id} が参加しました。`);
-        
         await room.publish({ streams: localStreams });
         
         peer.onStreamPublished.add(async ({ publication }) => {
@@ -144,7 +143,6 @@ function setupRoomEventListeners() {
         });
     });
 
-    // ピアが退出したとき
     room.onPeerLeft.add(({ peerId }) => {
         console.log(`ピア ${peerId} が退出しました。`);
         const videoEl = document.getElementById(`remote-video-${peerId}`);
@@ -153,7 +151,6 @@ function setupRoomEventListeners() {
         }
     });
 
-    // ルームが閉じられたとき
     room.onClosed.add(() => {
         console.warn('ルームが閉じられました。');
         cleanup();
