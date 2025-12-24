@@ -1,8 +1,8 @@
-// public/script.js
+// public/script.js (P2Pロジック最終修正版)
 
-// 修正済み：SkyWayStreamFactoryを @skyway-sdk/core からインポート
-import { SkyWayContext, SkyWayRoom } from '@skyway-sdk/room'; 
-import { SkyWayStreamFactory } from '@skyway-sdk/core';
+// ★★★ 修正箇所：SkyWayContextを @skyway-sdk/core からインポートする ★★★
+import { SkyWayRoom } from '@skyway-sdk/room'; 
+import { SkyWayContext, SkyWayStreamFactory } from '@skyway-sdk/core';
 
 
 // =========================================================
@@ -77,6 +77,7 @@ async function joinRoom() {
         videoStream.attach(localVideo);
 
         // 2. Contextの作成 (App IDを使用)
+        // SkyWayContext は @skyway-sdk/core からインポート
         context = await SkyWayContext.Create({ 
             appId: config.appId, 
             rtcConfig: {
@@ -86,6 +87,7 @@ async function joinRoom() {
 
 
         // 3. ルームへの接続 (P2P Room)
+        // SkyWayRoom は @skyway-sdk/room からインポート
         room = await SkyWayRoom.FindOrCreate(context, {
             name: roomId,
             type: 'p2p', // P2P ルーム
@@ -121,17 +123,13 @@ function setupRoomEventListeners() {
     room.onPeerJoined.add(async ({ peer }) => {
         console.log(`ピア ${peer.id} が参加しました。`);
         
-        // 参加したピアにローカルストリームを公開
         await room.publish({ streams: localStreams });
         
-        // リモートピアのストリームが公開されたとき
         peer.onStreamPublished.add(async ({ publication }) => {
             console.log(`ピア ${peer.id} がストリームを公開しました。`);
 
-            // ストリームを購読
             const subscribedStream = await room.subscribe(publication.id);
 
-            // ストリームタイプをチェック
             if (subscribedStream.contentType === 'video' || subscribedStream.contentType === 'audio') {
                  const remoteVideo = document.createElement('video');
                  remoteVideo.autoplay = true;
@@ -167,7 +165,6 @@ function setupRoomEventListeners() {
  * 接続切断後のリソース解放とUIリセット
  */
 function cleanup() {
-    // ストリームの停止
     localStreams.forEach(stream => {
         if (stream.track) {
             stream.track.stop();
@@ -175,14 +172,12 @@ function cleanup() {
     });
     localStreams = [];
 
-    // ルームのクローズ
     if (room) {
         room.close();
         room = null;
     }
     context = null;
 
-    // DOMのリセット
     localVideo.srcObject = null;
     remoteMediaContainer.innerHTML = '<h2>相手</h2>';
     
