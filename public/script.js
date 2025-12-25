@@ -1,9 +1,8 @@
-// public/script.js
+// public/script.js (P2Pロジック最終確定版)
 
-// SkyWayContext と SkyWayRoom は @skyway-sdk/room からインポート (論理的な最終結論)
-import { SkyWayContext, SkyWayRoom } from '@skyway-sdk/room'; 
-// SkyWayStreamFactory は @skyway-sdk/core からインポート
-import { SkyWayStreamFactory } from '@skyway-sdk/core';
+// ★★★ 修正箇所: SkyWayContext を SkyWayStreamFactory と同じ @skyway-sdk/core からインポート ★★★
+import { SkyWayContext, SkyWayStreamFactory } from '@skyway-sdk/core';
+import { SkyWayRoom } from '@skyway-sdk/room'; 
 
 
 // =========================================================
@@ -77,7 +76,7 @@ async function joinRoom() {
         // ローカル映像をDOMにアタッチ
         videoStream.attach(localVideo);
 
-        // 2. Contextの作成
+        // 2. Contextの作成 (今回は core からインポート)
         context = await SkyWayContext.Create({ 
             appId: config.appId, 
             rtcConfig: {
