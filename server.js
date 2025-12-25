@@ -47,28 +47,52 @@ app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
 app.get('/api/skyway-token', (req, res) => {
     const peerId = 'p2p-peer-' + Date.now(); 
 
-    const token = new SkyWayToken({
-        app: {
-            id: SKYWAY_APP_ID,
-            secret: SKYWAY_SECRET_KEY,
-        },
-        peer: {
-            id: peerId,
-            scope: [{
-                service: 'room',
-                actions: ['write'],
-                resource: { room: 'room-name:*', name: peerId, type: 'p2p' } 
-            }],
-        },
-        ttl: 3600 // 1時間有効
-    }).encode();
 
-    res.json({
-        appId: SKYWAY_APP_ID,
-        token: token,
-        peerId: peerId
-    });
+
+
+
+// ★★★ デバッグログ 1: 環境変数の確認 ★★★
+    console.log(`[DEBUG LOG 1] App ID Available: ${!!SKYWAY_APP_ID}`);
+    
+    try {
+        const token = new SkyWayToken({
+            app: {
+                id: SKYWAY_APP_ID,
+                secret: SKYWAY_SECRET_KEY,
+            },
+            peer: {
+                id: peerId,
+                scope: [{
+                    service: 'room',
+                    actions: ['write'],
+                    resource: { room: 'room-name:*', name: peerId, type: 'p2p' } 
+                }],
+            },
+            ttl: 3600
+        }).encode();
+
+        // ★★★ デバッグログ 2: トークン生成成功の確認 ★★★
+        console.log(`[DEBUG LOG 2] Token generated successfully.`);
+        
+        res.json({
+            appId: SKYWAY_APP_ID,
+            token: token,
+            peerId: peerId
+        });
+        
+    } catch (error) {
+        // ★★★ デバッグログ 3: トークン生成失敗とエラー内容の記録 ★★★
+        console.error(`[DEBUG LOG 3] Token generation failed: ${error.message}`);
+        // クライアントには 500 エラーを返し、Renderログに詳細を残す
+        res.status(500).send('Internal Server Error during token generation.');
+    }
 });
+
+
+
+
+
+
 
 app.listen(PORT, () => {
   console.log(`サーバーがポート ${PORT} で起動しました。`);
