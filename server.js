@@ -14,6 +14,28 @@ if (!SKYWAY_APP_ID || !SKYWAY_SECRET_KEY) {
   process.exit(1);
 }
 
+
+
+
+
+
+
+// ★★★ ここからデバッグ用コード ★★★
+console.log(`Debug Check: App ID Length is ${SKYWAY_APP_ID ? SKYWAY_APP_ID.length : 0}`);
+// Secret Key は機密情報なので、長さのみを確認します。
+console.log(`Debug Check: Secret Key Length is ${SKYWAY_SECRET_KEY ? SKYWAY_SECRET_KEY.length : 0}`); 
+// ★★★ ここまでデバッグ用コード ★★★
+
+
+
+
+
+
+
+
+
+
+
 const app = express();
 
 // 1. 静的ファイルの配信設定
