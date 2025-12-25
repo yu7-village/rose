@@ -13,7 +13,7 @@
   ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "express": "^5.2.1",
     "@skyway-sdk/room": "^2.2.1",
