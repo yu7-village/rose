@@ -3,13 +3,20 @@
 const express = require('express');
 const path = require('path');
 
-// ★★★ 最終修正箇所: SkyWayToken のインポート形式を修正 ★★★
-// TypeError を回避するため、モジュールのインポート形式を安全に処理します。
+
+
+
+
+// ★★★ 最終調整: SkyWayToken のインポート形式。default を最優先する。 ★★★
 const SkyWayTokenModule = require('@skyway-sdk/token');
-// SkyWayTokenModule.SkyWayToken がない場合は、.default を確認し、それもなければモジュール自体を試す。
-// この形式で、CommonJSとESMの様々なエクスポートパターンに対応します。
-const SkyWayToken = SkyWayTokenModule.SkyWayToken || (SkyWayTokenModule.default ? SkyWayTokenModule.default : SkyWayTokenModule);
-// ★★★ 修正箇所ここまで ★★★
+
+// ほとんどのモダンJSパッケージでは、default が実際のクラスを指します。
+// .default が存在する場合はそれを使い、なければモジュール自体を使う。
+const SkyWayToken = SkyWayTokenModule.default || SkyWayTokenModule;
+// ★★★ 最終調整ここまで ★★★
+
+
+
 
 // 環境変数はRenderで設定します。
 const SKYWAY_APP_ID = process.env.SKYWAY_APP_ID;
