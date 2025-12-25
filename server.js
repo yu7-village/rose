@@ -3,9 +3,12 @@
 const express = require('express');
 const path = require('path');
 
-// ★★★ 修正箇所: SkyWayToken のインポート形式を修正 ★★★
+// ★★★ 最終修正箇所: SkyWayToken のインポート形式を修正 ★★★
+// TypeError を回避するため、モジュールのインポート形式を安全に処理します。
 const SkyWayTokenModule = require('@skyway-sdk/token');
-const SkyWayToken = SkyWayTokenModule.SkyWayToken || SkyWayTokenModule.default.SkyWayToken || SkyWayTokenModule.default;
+// SkyWayTokenModule.SkyWayToken がない場合は、.default を確認し、それもなければモジュール自体を試す。
+// この形式で、CommonJSとESMの様々なエクスポートパターンに対応します。
+const SkyWayToken = SkyWayTokenModule.SkyWayToken || (SkyWayTokenModule.default ? SkyWayTokenModule.default : SkyWayTokenModule);
 // ★★★ 修正箇所ここまで ★★★
 
 // 環境変数はRenderで設定します。
@@ -29,7 +32,7 @@ app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
 app.get('/api/skyway-token', (req, res) => {
     const peerId = 'p2p-peer-' + Date.now(); 
 
-    // デバッグログ: 環境変数が読み込まれていることを確認 (ログは Render に出力されます)
+    // デバッグログ: 環境変数が読み込まれていることを確認 (Renderのログに出力されます)
     console.log(`[DEBUG LOG 1] App ID Available: ${!!SKYWAY_APP_ID}`);
     
     try {
