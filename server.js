@@ -7,11 +7,8 @@ const path = require('path');
 
 
 
-// ★★★ 最終調整: SkyWayToken のインポート形式。default を最優先する。 ★★★
+// ★★★ 最終調整: SkyWayTokenModule の .default プロパティを直接使用 ★★★
 const SkyWayTokenModule = require('@skyway-sdk/token');
-
-// ほとんどのモダンJSパッケージでは、default が実際のクラスを指します。
-// .default が存在する場合はそれを使い、なければモジュール自体を使う。
 const SkyWayToken = SkyWayTokenModule.default || SkyWayTokenModule;
 // ★★★ 最終調整ここまで ★★★
 
