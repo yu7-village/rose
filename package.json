@@ -16,8 +16,8 @@
   "type": "commonjs",
   "dependencies": {
     "express": "^5.2.1",
-    "@skyway-sdk/room": "^2.2.1",
-    "@skyway-sdk/token": "^2.0.2", 
-    "@skyway-sdk/core": "^2.2.1" 
+    "@skyway-sdk/room": "2.2.1",
+    "@skyway-sdk/token": "2.0.2", 
+    "@skyway-sdk/core": "2.2.1" 
   }
 }
