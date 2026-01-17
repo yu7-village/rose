@@ -1,4 +1,5 @@
-const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = @skyway-sdk/room;
+// 🚨 1行目をこのように修正します（末尾の +esm が重要です）
+import { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } from 'https://cdn.jsdelivr.net/npm/@skyway-sdk/room@2.2.1/+esm';
 
 const localVideo = document.getElementById('local-video');
 const buttonJoin = document.getElementById('join-button');
