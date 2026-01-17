@@ -1,4 +1,4 @@
-const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = skyway_room;
+const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = @skyway-sdk/room;
 
 const localVideo = document.getElementById('local-video');
 const buttonJoin = document.getElementById('join-button');
