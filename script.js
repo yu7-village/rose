@@ -3,32 +3,85 @@ import { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } from 'https://cdn.jsde
 
 const localVideo = document.getElementById('local-video');
 const buttonJoin = document.getElementById('join-button');
+const buttonLeave = document.getElementById('leave-button'); // 追加
 const roomNameInput = document.getElementById('room-name');
 const remoteMediaArea = document.getElementById('remote-media-area');
 
+let room; // ルームへの参照を保持
+let me;   // 自分自身の参照を保持
+
+
+
 buttonJoin.onclick = async () => {
-    if (roomNameInput.value === "") return;
+    if (!roomNameInput.value) return;
 
     try {
-        // 1. あなたのバックエンドからトークンを取得
         const response = await fetch(`https://skyway-token-backend.onrender.com/api/skyway-token?roomId=${roomNameInput.value}`);
         const data = await response.json();
         const { token } = data;
 
-        console.log("トークン取得成功:", token);
-
-        // 2. SkyWayのコンテキストを作成
         const context = await SkyWayContext.Create(token);
-
-        // 3. ルームを探すか作成する
-        const room = await SkyWayRoom.FindOrCreate(context, {
+        room = await SkyWayRoom.FindOrCreate(context, {
             type: 'p2p',
             name: roomNameInput.value,
         });
 
-        // 4. ルームに参加
-        const me = await room.join();
-        console.log("参加完了:", me.id);
+        me = await room.join();
+
+        const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
+        video.attach(localVideo);
+        await me.publish(audio);
+        await me.publish(video);
+
+        const subscribeAndAttach = async (publication) => {
+            if (publication.publisher.id === me.id) return;
+            const { stream } = await me.subscribe(publication.id);
+            let newMedia = document.createElement(stream.contentType === 'video' ? 'video' : 'audio');
+            newMedia.playsInline = true;
+            newMedia.autoplay = true;
+            if (stream.contentType === 'video') newMedia.width = 300;
+            stream.attach(newMedia);
+            remoteMediaArea.appendChild(newMedia);
+        };
+
+        room.onPublicationSubscribed.add(({ publication }) => subscribeAndAttach(publication));
+        room.publications.forEach(subscribeAndAttach);
+
+        // ボタンの状態切り替え
+        buttonJoin.disabled = true;
+        buttonLeave.disabled = false;
+        buttonJoin.innerText = "入室中";
+
+    } catch (error) {
+        console.error(error);
+        alert("接続失敗");
+    }
+};
+
+// --- 🚨 退出処理の追加 ---
+buttonLeave.onclick = async () => {
+    if (!room) return;
+
+    // 1. ルームを去る（これで相手側から自分の映像が消えます）
+    await me.leave();
+    await room.dispose(); // ルームのリソースを解放
+
+    // 2. 相手の映像表示エリアを空にする
+    remoteMediaArea.innerHTML = '';
+
+    // 3. 自分のビデオを停止して黒画面にする（必要に応じて）
+    localVideo.srcObject = null;
+
+    // 4. ボタンの状態を元に戻す
+    buttonJoin.disabled = false;
+    buttonLeave.disabled = true;
+    buttonJoin.innerText = "入室する";
+    
+    console.log("退出しました");
+};
+
+
+
 
         // 5. 自分のカメラとマイクを取得して公開（Publish）
         const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
