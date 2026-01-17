@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyWay P2P Room</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@skyway-sdk/room@latest/dist/skyway_room.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>SkyWay Video Chat</h1>
+        
+        <div class="setup">
+            <input type="text" id="room-name" placeholder="ルーム名を入力" value="default-room">
+            <button id="join-button">入室する</button>
+        </div>
+
+        <div class="video-container">
+            <div>
+                <p>自分 (Local)</p>
+                <video id="local-video" width="300px" autoplay muted playsinline></video>
+            </div>
+            <div id="remote-media-area">
+                </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
