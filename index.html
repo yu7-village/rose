@@ -5,37 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SkyWay P2P Room</title>
     <link rel="stylesheet" href="style.css">
-    </head>
+</head>
 <body>
     <div class="container">
-        <h1>Camera</h1>
+        <h1>SkyWay Video Chat</h1>
+        
         <div class="setup">
             <input type="text" id="room-name" placeholder="ルーム名を入力" value="default-room">
             <button id="join-button">入室する</button>
-            <button id="leave-button" disabled>退出する</button> </div>
+            <button id="leave-button" disabled>退出する</button>
         </div>
+
         <div class="video-container">
             <div>
                 <p>自分 (Local)</p>
                 <video id="local-video" width="300px" autoplay muted playsinline></video>
             </div>
-            <div id="remote-media-area"></div>
+            <div id="remote-media-area">
+                </div>
         </div>
 
         <div class="chat-container">
             <div id="chat-messages" style="height: 200px; border: 1px solid #ccc; overflow-y: scroll; margin-bottom: 10px; padding: 10px; text-align: left;">
-        </div>
+                </div>
             <div class="chat-input-area">
-            <input type="text" id="chat-input" placeholder="メッセージを入力" style="width: 70%;">
-            <button id="send-button">送信</button>
+                <input type="text" id="chat-input" placeholder="メッセージを入力" style="width: 70%;">
+                <button id="send-button">送信</button>
+            </div>
         </div>
-     </div>
-
-
-
-
-
     </div>
+
     <script type="module" src="script.js"></script>
 </body>
 </html>
