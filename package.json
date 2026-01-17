@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@skyway-sdk/room": "^2.3.0"
+  }
+}
