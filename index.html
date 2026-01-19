@@ -10,23 +10,9 @@
     <div class="container">
         <h1>SkyWay Video Chat</h1>
         
-
-
-<div class="member-list-container" style="margin-top: 10px; padding: 10px; border: 1px solid #ddd; background: #f9f9f9;">
-    <strong>参加中メンバー:</strong>
-    <ul id="member-list" style="list-style: none; padding: 0; margin: 5px 0 0 0; display: flex; gap: 10px; flex-wrap: wrap;">
-        </ul>
-</div>
-
-
-
-<div id="server-status" style="padding: 5px 10px; margin-bottom: 10px; border-radius: 4px; font-size: 14px; background: #eee;">
-    サーバー確認中...
-</div>
-
-
-
-
+        <div id="server-status" style="padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 14px; background: #eee;">
+            サーバー確認中...
+        </div>
 
         <div class="setup">
             <input type="text" id="room-name" placeholder="ルーム名を入力" value="default-room">
@@ -34,25 +20,27 @@
             <button id="leave-button" disabled>退出する</button>
         </div>
 
+        <div class="member-list-container" style="margin-top: 10px; padding: 10px; border: 1px solid #ddd; background: #f9f9f9;">
+            <strong>参加中メンバー:</strong>
+            <ul id="member-list" style="list-style: none; padding: 0; margin: 5px 0 0 0; display: flex; gap: 10px; flex-wrap: wrap;"></ul>
+        </div>
+
         <div class="video-container">
             <div>
                 <p>自分 (Local)</p>
                 <video id="local-video" width="300px" autoplay muted playsinline></video>
             </div>
-            <div id="remote-media-area">
-                </div>
+            <div id="remote-media-area"></div>
         </div>
 
         <div class="chat-container">
-            <div id="chat-messages" style="height: 200px; border: 1px solid #ccc; overflow-y: scroll; margin-bottom: 10px; padding: 10px; text-align: left;">
-                </div>
+            <div id="chat-messages" style="height: 200px; border: 1px solid #ccc; overflow-y: scroll; margin-bottom: 10px; padding: 10px; text-align: left;"></div>
             <div class="chat-input-area">
                 <input type="text" id="chat-input" placeholder="メッセージを入力" style="width: 70%;">
                 <button id="send-button">送信</button>
             </div>
         </div>
     </div>
-
     <script type="module" src="script.js"></script>
 </body>
 </html>

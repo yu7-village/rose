@@ -18,57 +18,34 @@ let dataStream;
 
 const BACKEND_URL = "https://skyway-token-backend.onrender.com"; // あなたのRenderのURL
 
-
-
-
-
-// サーバー起動確認用のルート (CORS対応を追加)
-app.get('/', (req, res) => {
-    // すべてのオリジンからのアクセスを許可するヘッダーを追加
-    res.setHeader('Access-Control-Allow-Origin', '*'); 
-    res.send('SkyWay Auth Token Server (V3) is running.');
-});
-
-// トークン生成エンドポイント (すでに追加済みであれば確認)
-app.get('/api/skyway-token', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*'); 
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-
-
-
-
-
-
 // --- 1. バックエンドの起動確認 (Health Check) ---
 async function checkServerStatus() {
+    if (!serverStatus) return;
     serverStatus.innerText = "⏳ サーバー起動を確認中（Renderスリープ復帰には約1分かかる場合があります）...";
-    serverStatus.style.background = "#fff3cd"; // 黄色
+    serverStatus.style.background = "#fff3cd";
     buttonJoin.disabled = true;
 
     while (true) {
         try {
-            // サーバーのルートURLにアクセス
             const response = await fetch(BACKEND_URL);
             if (response.ok) {
                 serverStatus.innerText = "✅ サーバー準備完了！トークン発行可能です。";
-                serverStatus.style.background = "#d4edda"; // 緑色
+                serverStatus.style.background = "#d4edda";
                 buttonJoin.disabled = false;
-                break; // 成功したらループを抜ける
+                break;
             }
         } catch (e) {
             console.log("サーバー復帰を待機中...");
         }
-        // 5秒待機して再試行
         await new Promise(resolve => setTimeout(resolve, 5000));
     }
 }
 
-// ページ読み込み時にサーバーチェックを開始
 checkServerStatus();
 
 // --- 2. メンバーリスト更新関数 ---
 function updateMemberList() {
-    if (!room || !me) return;
+    if (!room || !me || !memberList) return;
     memberList.innerHTML = '';
     room.members.forEach(member => {
         const li = document.createElement('li');
@@ -84,7 +61,6 @@ buttonJoin.onclick = async () => {
     if (roomNameInput.value === "") return;
 
     try {
-        // トークンの取得
         const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomNameInput.value}`);
         const data = await response.json();
         const { token } = data;
@@ -141,7 +117,7 @@ buttonJoin.onclick = async () => {
 
     } catch (error) {
         console.error(error);
-        alert("接続失敗");
+        alert("接続失敗: " + error.message);
     }
 };
 
@@ -179,3 +155,4 @@ function appendMessage(text) {
     chatMessages.appendChild(messageElement);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
+
