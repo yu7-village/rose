@@ -134,15 +134,22 @@ buttonJoin.onclick = async () => {
     }
 };
 
-// --- 4. デバイス操作 ---
+
+
+
+
+// --- 4. デバイス操作 (エラー修正版) ---
 muteButton.onclick = () => {
     if (!localAudio) return;
+    
     if (isMuted) {
-        localAudio.unmute();
+        // ミュート解除（音声を有効化）
+        localAudio.track.enabled = true; // trackプロパティのenabledを操作
         muteButton.innerText = "マイク：ON";
         isMuted = false;
     } else {
-        localAudio.mute();
+        // ミュート実行（音声を無効化）
+        localAudio.track.enabled = false;
         muteButton.innerText = "マイク：OFF（消音）";
         isMuted = true;
     }
@@ -150,16 +157,26 @@ muteButton.onclick = () => {
 
 cameraButton.onclick = () => {
     if (!localVideoTrack) return;
+    
     if (isCameraOff) {
-        localVideoTrack.unmute();
+        // カメラ再開
+        localVideoTrack.track.enabled = true; // trackプロパティのenabledを操作
         cameraButton.innerText = "カメラ：ON";
         isCameraOff = false;
     } else {
-        localVideoTrack.mute();
+        // カメラ停止
+        localVideoTrack.track.enabled = false;
         cameraButton.innerText = "カメラ：OFF（停止）";
         isCameraOff = true;
     }
 };
+
+
+
+
+
+
+
 
 // --- 5. メッセージ送信 ---
 sendButton.onclick = () => {
