@@ -5,6 +5,8 @@ const serverStatus = document.getElementById('server-status');
 const localVideo = document.getElementById('local-video');
 const buttonJoin = document.getElementById('join-button');
 const buttonLeave = document.getElementById('leave-button');
+const muteButton = document.getElementById('mute-button');
+const cameraButton = document.getElementById('camera-button');
 const roomNameInput = document.getElementById('room-name');
 const remoteMediaArea = document.getElementById('remote-media-area');
 const chatInput = document.getElementById('chat-input');
@@ -15,10 +17,14 @@ const memberList = document.getElementById('member-list');
 let room;
 let me;
 let dataStream;
+let localAudio; // マイク操作用
+let localVideoTrack; // カメラ操作用
+let isMuted = false;
+let isCameraOff = false;
 
-const BACKEND_URL = "https://skyway-token-backend.onrender.com"; // あなたのRenderのURL
+const BACKEND_URL = "https://skyway-token-backend.onrender.com";
 
-// --- 1. バックエンドの起動確認 (Health Check) ---
+// --- 1. バックエンドの起動確認 ---
 async function checkServerStatus() {
     if (!serverStatus) return;
     serverStatus.innerText = "⏳ サーバー起動を確認中（Renderスリープ復帰には約1分かかる場合があります）...";
@@ -43,7 +49,7 @@ async function checkServerStatus() {
 
 checkServerStatus();
 
-// --- 2. メンバーリスト更新関数 ---
+// --- 2. メンバーリスト更新 ---
 function updateMemberList() {
     if (!room || !me || !memberList) return;
     memberList.innerHTML = '';
@@ -103,14 +109,21 @@ buttonJoin.onclick = async () => {
         room.onStreamPublished.add(({ publication }) => subscribeAndAttach(publication));
         room.publications.forEach(subscribeAndAttach);
 
+        // 自分のメディアを取得・保存
         const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
+        localAudio = audio;
+        localVideoTrack = video;
+        
         video.attach(localVideo);
-        await me.publish(audio);
-        await me.publish(video);
+        await me.publish(localAudio);
+        await me.publish(localVideoTrack);
 
         dataStream = await SkyWayStreamFactory.createDataStream();
         await me.publish(dataStream);
 
+        // UI有効化
+        muteButton.disabled = false;
+        cameraButton.disabled = false;
         buttonJoin.innerText = "入室中";
         buttonJoin.disabled = true;
         buttonLeave.disabled = false;
@@ -121,7 +134,34 @@ buttonJoin.onclick = async () => {
     }
 };
 
-// --- 4. メッセージ送信処理 ---
+// --- 4. デバイス操作 ---
+muteButton.onclick = () => {
+    if (!localAudio) return;
+    if (isMuted) {
+        localAudio.unmute();
+        muteButton.innerText = "マイク：ON";
+        isMuted = false;
+    } else {
+        localAudio.mute();
+        muteButton.innerText = "マイク：OFF（消音）";
+        isMuted = true;
+    }
+};
+
+cameraButton.onclick = () => {
+    if (!localVideoTrack) return;
+    if (isCameraOff) {
+        localVideoTrack.unmute();
+        cameraButton.innerText = "カメラ：ON";
+        isCameraOff = false;
+    } else {
+        localVideoTrack.mute();
+        cameraButton.innerText = "カメラ：OFF（停止）";
+        isCameraOff = true;
+    }
+};
+
+// --- 5. メッセージ送信 ---
 sendButton.onclick = () => {
     if (chatInput.value === "" || !dataStream) return;
     try {
@@ -131,7 +171,7 @@ sendButton.onclick = () => {
     } catch (e) { console.warn("送信失敗"); }
 };
 
-// --- 5. 退出処理 ---
+// --- 6. 退出処理 ---
 buttonLeave.onclick = async () => {
     if (!room || !me) return;
     await me.leave();
@@ -139,13 +179,21 @@ buttonLeave.onclick = async () => {
     remoteMediaArea.innerHTML = '';
     chatMessages.innerHTML = '';
     memberList.innerHTML = '';
+    
     if (localVideo.srcObject) {
         localVideo.srcObject.getTracks().forEach(track => track.stop());
         localVideo.srcObject = null;
     }
+    
+    muteButton.innerText = "マイク：ON";
+    cameraButton.innerText = "カメラ：ON";
+    muteButton.disabled = true;
+    cameraButton.disabled = true;
     buttonJoin.innerText = "入室する";
     buttonJoin.disabled = false;
     buttonLeave.disabled = true;
+    isMuted = false;
+    isCameraOff = false;
 };
 
 function appendMessage(text) {
@@ -155,6 +203,4 @@ function appendMessage(text) {
     chatMessages.appendChild(messageElement);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
-
-
 
