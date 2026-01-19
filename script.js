@@ -18,6 +18,27 @@ let dataStream;
 
 const BACKEND_URL = "https://skyway-token-backend.onrender.com"; // あなたのRenderのURL
 
+
+
+
+
+// サーバー起動確認用のルート (CORS対応を追加)
+app.get('/', (req, res) => {
+    // すべてのオリジンからのアクセスを許可するヘッダーを追加
+    res.setHeader('Access-Control-Allow-Origin', '*'); 
+    res.send('SkyWay Auth Token Server (V3) is running.');
+});
+
+// トークン生成エンドポイント (すでに追加済みであれば確認)
+app.get('/api/skyway-token', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*'); 
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+
+
+
+
+
+
 // --- 1. バックエンドの起動確認 (Health Check) ---
 async function checkServerStatus() {
     serverStatus.innerText = "⏳ サーバー起動を確認中（Renderスリープ復帰には約1分かかる場合があります）...";
