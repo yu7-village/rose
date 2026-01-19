@@ -1,5 +1,7 @@
 import { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } from 'https://cdn.jsdelivr.net/npm/@skyway-sdk/room@2.2.1/+esm';
 
+// UI要素の取得
+const serverStatus = document.getElementById('server-status');
 const localVideo = document.getElementById('local-video');
 const buttonJoin = document.getElementById('join-button');
 const buttonLeave = document.getElementById('leave-button');
@@ -8,13 +10,42 @@ const remoteMediaArea = document.getElementById('remote-media-area');
 const chatInput = document.getElementById('chat-input');
 const sendButton = document.getElementById('send-button');
 const chatMessages = document.getElementById('chat-messages');
-const memberList = document.getElementById('member-list'); // 追加
+const memberList = document.getElementById('member-list');
 
 let room;
 let me;
 let dataStream;
 
-// メンバーリスト表示を更新する補助関数
+const BACKEND_URL = "https://skyway-token-backend.onrender.com"; // あなたのRenderのURL
+
+// --- 1. バックエンドの起動確認 (Health Check) ---
+async function checkServerStatus() {
+    serverStatus.innerText = "⏳ サーバー起動を確認中（Renderスリープ復帰には約1分かかる場合があります）...";
+    serverStatus.style.background = "#fff3cd"; // 黄色
+    buttonJoin.disabled = true;
+
+    while (true) {
+        try {
+            // サーバーのルートURLにアクセス
+            const response = await fetch(BACKEND_URL);
+            if (response.ok) {
+                serverStatus.innerText = "✅ サーバー準備完了！トークン発行可能です。";
+                serverStatus.style.background = "#d4edda"; // 緑色
+                buttonJoin.disabled = false;
+                break; // 成功したらループを抜ける
+            }
+        } catch (e) {
+            console.log("サーバー復帰を待機中...");
+        }
+        // 5秒待機して再試行
+        await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+}
+
+// ページ読み込み時にサーバーチェックを開始
+checkServerStatus();
+
+// --- 2. メンバーリスト更新関数 ---
 function updateMemberList() {
     if (!room || !me) return;
     memberList.innerHTML = '';
@@ -27,11 +58,13 @@ function updateMemberList() {
     });
 }
 
+// --- 3. 入室処理 ---
 buttonJoin.onclick = async () => {
     if (roomNameInput.value === "") return;
 
     try {
-        const response = await fetch(`https://skyway-token-backend.onrender.com/api/skyway-token?roomId=${roomNameInput.value}`);
+        // トークンの取得
+        const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomNameInput.value}`);
         const data = await response.json();
         const { token } = data;
 
@@ -40,12 +73,11 @@ buttonJoin.onclick = async () => {
 
         me = await room.join();
         
-        // 🚨 参加者リストの初期表示とイベント登録
         updateMemberList();
         room.onMemberJoined.add(() => updateMemberList());
         room.onMemberLeft.add(({ member }) => {
             updateMemberList();
-            appendMessage(`通知: 相手(${member.id.substring(0,5)})が退出しました`);
+            appendMessage(`通知: 相手が退出しました`);
         });
 
         const subscribeAndAttach = async (publication) => {
@@ -92,6 +124,7 @@ buttonJoin.onclick = async () => {
     }
 };
 
+// --- 4. メッセージ送信処理 ---
 sendButton.onclick = () => {
     if (chatInput.value === "" || !dataStream) return;
     try {
@@ -101,13 +134,14 @@ sendButton.onclick = () => {
     } catch (e) { console.warn("送信失敗"); }
 };
 
+// --- 5. 退出処理 ---
 buttonLeave.onclick = async () => {
     if (!room || !me) return;
     await me.leave();
     await room.dispose();
     remoteMediaArea.innerHTML = '';
     chatMessages.innerHTML = '';
-    memberList.innerHTML = ''; // リストをクリア
+    memberList.innerHTML = '';
     if (localVideo.srcObject) {
         localVideo.srcObject.getTracks().forEach(track => track.stop());
         localVideo.srcObject = null;
