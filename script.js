@@ -156,3 +156,5 @@ function appendMessage(text) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+
+
