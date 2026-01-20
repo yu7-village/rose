@@ -1,6 +1,6 @@
 import { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } from 'https://cdn.jsdelivr.net/npm/@skyway-sdk/room@2.2.1/+esm';
 
-// UI要素
+// UI要素の取得
 const serverStatus = document.getElementById('server-status');
 const localVideo = document.getElementById('local-video');
 const buttonJoin = document.getElementById('join-button');
@@ -20,7 +20,7 @@ let isCameraOff = false;
 
 const BACKEND_URL = "https://skyway-token-backend.onrender.com";
 
-// 1. サーバー起動確認
+// --- 1. バックエンドの起動確認 ---
 async function checkServerStatus() {
     if (!serverStatus) return;
     serverStatus.innerText = "⏳ サーバー起動を確認中...";
@@ -37,7 +37,7 @@ async function checkServerStatus() {
 }
 checkServerStatus();
 
-// 2. メンバーリスト更新
+// --- 2. メンバーリスト更新 ---
 function updateMemberList() {
     if (!room || !memberList) return;
     memberList.innerHTML = '';
@@ -49,12 +49,13 @@ function updateMemberList() {
     });
 }
 
-// 3. 入室処理
+// --- 3. 入室処理 ---
 buttonJoin.onclick = async () => {
     if (roomNameInput.value === "") return;
     try {
         const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomNameInput.value}`);
-        const { token } = await response.json();
+        const data = await response.json();
+        const token = data.token;
 
         const context = await SkyWayContext.Create(token);
         room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: roomNameInput.value });
@@ -95,11 +96,12 @@ buttonJoin.onclick = async () => {
         muteButton.disabled = cameraButton.disabled = false;
         buttonJoin.disabled = true; buttonLeave.disabled = false;
     } catch (error) {
+        console.error(error);
         alert("接続失敗: " + error.message);
     }
 };
 
-// 4. デバイス操作
+// --- 4. デバイス操作 ---
 muteButton.onclick = () => {
     isMuted = !isMuted;
     localAudio.track.enabled = !isMuted;
@@ -111,7 +113,7 @@ cameraButton.onclick = () => {
     cameraButton.innerText = isCameraOff ? "カメラ：OFF" : "カメラ：ON";
 };
 
-// 5. メッセージ送信
+// --- 5. メッセージ送信 ---
 sendButton.onclick = () => {
     if (!chatInput.value || !dataStream) return;
     dataStream.write(chatInput.value);
@@ -119,11 +121,9 @@ sendButton.onclick = () => {
     chatInput.value = "";
 };
 
-// 6. 退出処理
+// --- 6. 退出処理 ---
 buttonLeave.onclick = async () => {
-    await me.leave();
-    await room.dispose();
-    location.reload(); // 確実にリセットするためにリロード
+    location.reload(); // 全リセットのためリロード
 };
 
 function appendMessage(text) {
