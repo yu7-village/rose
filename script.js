@@ -72,7 +72,7 @@ buttonJoin.onclick = async () => {
         const { token } = data;
 
         const context = await SkyWayContext.Create(token);
-        room = await SkyWayRoom.FindOrCreate(context, { type: 'sfu', name: roomNameInput.value });
+        room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: roomNameInput.value });
 
         me = await room.join();
         
