@@ -1,9 +1,9 @@
 import { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } from 'https://cdn.jsdelivr.net/npm/@skyway-sdk/room@2.2.1/+esm';
 
-// 1. あなたのバックエンドURL（末尾のスラッシュなしが推奨）
+// --- 設定 ---
 const BACKEND_URL = "https://skyway-token-backend.onrender.com";
 
-// 2. HTML要素の取得
+// --- UI要素の取得 ---
 const serverStatus = document.getElementById('server-status');
 const localVideo = document.getElementById('local-video');
 const buttonJoin = document.getElementById('join-button');
@@ -14,9 +14,7 @@ const chatMessages = document.getElementById('chat-messages');
 
 let room, me, dataStream;
 
-/**
- * サーバーの起動状態をチェックする関数
- */
+// --- 1. バックエンドの起動確認 ---
 async function checkServerStatus() {
     if (!serverStatus) return;
     try {
@@ -31,51 +29,35 @@ async function checkServerStatus() {
         setTimeout(checkServerStatus, 5000);
     }
 }
-
-// 起動時にサーバーチェックを開始
 checkServerStatus();
 
-/**
- * 入室ボタンクリック時の処理
- */
+// --- 2. 入室処理 ---
 buttonJoin.onclick = async () => {
-    if (!roomNameInput.value) {
-        alert("ルーム名を入力してください");
-        return;
-    }
+    const roomName = roomNameInput.value;
+    if (!roomName) return alert("ルーム名を入力してください");
 
     try {
-        // --- 手順A: バックエンドからトークンを取得 ---
-        const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomNameInput.value}`);
-        if (!response.ok) throw new Error("トークンの取得に失敗しました");
-        
+        // A. トークン取得
+        const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomName}`);
+        if (!response.ok) throw new Error("サーバーからトークンを取得できませんでした");
         const data = await response.json();
         const token = data.token;
 
-        // --- 手順B: SkyWayコンテキストの作成 (ここでデコードが行われます) ---
+        // B. Contextの作成 (failed to decodeエラーが出るのはここです)
         const context = await SkyWayContext.Create(token);
 
-        // --- 手順C: ルームへの参加 (P2Pモード) ---
-        room = await SkyWayRoom.FindOrCreate(context, { 
-            type: 'p2p', 
-            name: roomNameInput.value 
-        });
-
+        // C. ルーム参加 (P2P)
+        room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: roomName });
         me = await room.join();
 
-        // --- 手順D: 他の参加者のストリームを受信する設定 ---
+        // D. 受信設定（映像・音声・データ）
         const subscribeAndAttach = async (publication) => {
             if (publication.publisher.id === me.id) return;
-
             const { stream } = await me.subscribe(publication.id);
             
             if (stream.contentType === 'data') {
-                // チャットデータの受信
-                stream.onData.add(d => {
-                    appendMessage(`相手: ${d}`);
-                });
+                stream.onData.add(d => appendMessage(`相手: ${d}`));
             } else {
-                // 映像・音声の受信
                 const newMedia = document.createElement(stream.contentType === 'video' ? 'video' : 'audio');
                 newMedia.id = `media-${publication.id}`;
                 newMedia.playsInline = true;
@@ -86,23 +68,19 @@ buttonJoin.onclick = async () => {
             }
         };
 
-        // すでに公開されているストリームを購読
-        room.publications.forEach(subscribeAndAttach);
-        // 新しく公開されたストリームを購読
         room.onStreamPublished.add(e => subscribeAndAttach(e.publication));
+        room.publications.forEach(subscribeAndAttach);
 
-        // --- 手順E: 自分の映像・音声を公開 ---
+        // E. 自分のメディア（カメラ・マイク）公開
         const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
         video.attach(localVideo);
-        
         await me.publish(audio);
         await me.publish(video);
-        
-        // チャット用のデータストリームを公開
+
+        // チャット用データストリーム
         dataStream = await SkyWayStreamFactory.createDataStream();
         await me.publish(dataStream);
 
-        // UIの状態更新
         buttonJoin.disabled = true;
         buttonLeave.disabled = false;
 
@@ -112,16 +90,11 @@ buttonJoin.onclick = async () => {
     }
 };
 
-/**
- * 退室（リロード）
- */
+// --- 3. 退出処理 ---
 buttonLeave.onclick = () => {
-    location.reload();
+    location.reload(); // 確実にリセットするためリロード
 };
 
-/**
- * チャットメッセージを画面に表示する
- */
 function appendMessage(text) {
     const el = document.createElement('div');
     el.innerText = text;
