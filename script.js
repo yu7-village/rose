@@ -1,6 +1,6 @@
 import { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } from 'https://cdn.jsdelivr.net/npm/@skyway-sdk/room@2.2.1/+esm';
 
-// UI要素の取得
+// UI要素
 const serverStatus = document.getElementById('server-status');
 const localVideo = document.getElementById('local-video');
 const buttonJoin = document.getElementById('join-button');
@@ -17,17 +17,17 @@ const memberList = document.getElementById('member-list');
 let room;
 let me;
 let dataStream;
-let localAudio; // マイク操作用
-let localVideoTrack; // カメラ操作用
+let localAudio;
+let localVideoTrack;
 let isMuted = false;
 let isCameraOff = false;
 
 const BACKEND_URL = "https://skyway-token-backend.onrender.com";
 
-// --- 1. バックエンドの起動確認 ---
+// 1. サーバー起動確認
 async function checkServerStatus() {
     if (!serverStatus) return;
-    serverStatus.innerText = "⏳ サーバー起動を確認中（Renderスリープ復帰には約1分かかる場合があります）...";
+    serverStatus.innerText = "⏳ サーバー起動を確認中...";
     serverStatus.style.background = "#fff3cd";
     buttonJoin.disabled = true;
 
@@ -35,21 +35,18 @@ async function checkServerStatus() {
         try {
             const response = await fetch(BACKEND_URL);
             if (response.ok) {
-                serverStatus.innerText = "✅ サーバー準備完了！トークン発行可能です。";
+                serverStatus.innerText = "✅ サーバー準備完了！";
                 serverStatus.style.background = "#d4edda";
                 buttonJoin.disabled = false;
                 break;
             }
-        } catch (e) {
-            console.log("サーバー復帰を待機中...");
-        }
+        } catch (e) {}
         await new Promise(resolve => setTimeout(resolve, 5000));
     }
 }
-
 checkServerStatus();
 
-// --- 2. メンバーリスト更新 ---
+// 2. メンバーリスト更新
 function updateMemberList() {
     if (!room || !me || !memberList) return;
     memberList.innerHTML = '';
@@ -62,10 +59,9 @@ function updateMemberList() {
     });
 }
 
-// --- 3. 入室処理 ---
+// 3. 入室処理
 buttonJoin.onclick = async () => {
     if (roomNameInput.value === "") return;
-
     try {
         const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomNameInput.value}`);
         const data = await response.json();
@@ -75,19 +71,14 @@ buttonJoin.onclick = async () => {
         room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: roomNameInput.value });
 
         me = await room.join();
-        
         updateMemberList();
         room.onMemberJoined.add(() => updateMemberList());
-        room.onMemberLeft.add(({ member }) => {
-            updateMemberList();
-            appendMessage(`通知: 相手が退出しました`);
-        });
+        room.onMemberLeft.add(() => updateMemberList());
 
         const subscribeAndAttach = async (publication) => {
             if (!publication || publication.publisher.id === me.id) return;
             const { stream } = await me.subscribe(publication.id);
             const mediaId = `media-${publication.id}`;
-
             if (stream.contentType === 'data') {
                 stream.onData.add((data) => appendMessage(`相手: ${data}`));
             } else {
@@ -99,96 +90,55 @@ buttonJoin.onclick = async () => {
                 stream.attach(newMedia);
                 remoteMediaArea.appendChild(newMedia);
             }
-
-            publication.onUnpublished.add(() => {
-                const el = document.getElementById(mediaId);
-                if (el) el.remove();
-            });
+            publication.onUnpublished.add(() => document.getElementById(mediaId)?.remove());
         };
 
         room.onStreamPublished.add(({ publication }) => subscribeAndAttach(publication));
         room.publications.forEach(subscribeAndAttach);
 
-        // 自分のメディアを取得・保存
         const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
         localAudio = audio;
         localVideoTrack = video;
-        
         video.attach(localVideo);
         await me.publish(localAudio);
         await me.publish(localVideoTrack);
-
         dataStream = await SkyWayStreamFactory.createDataStream();
         await me.publish(dataStream);
 
-        // UI有効化
         muteButton.disabled = false;
         cameraButton.disabled = false;
         buttonJoin.innerText = "入室中";
         buttonJoin.disabled = true;
         buttonLeave.disabled = false;
-
     } catch (error) {
-        console.error(error);
         alert("接続失敗: " + error.message);
     }
 };
 
-
-
-
-
-// --- 4. デバイス操作 (エラー修正版) ---
+// 4. デバイス操作
 muteButton.onclick = () => {
     if (!localAudio) return;
-    
-    if (isMuted) {
-        // ミュート解除（音声を有効化）
-        localAudio.track.enabled = true; // trackプロパティのenabledを操作
-        muteButton.innerText = "マイク：ON";
-        isMuted = false;
-    } else {
-        // ミュート実行（音声を無効化）
-        localAudio.track.enabled = false;
-        muteButton.innerText = "マイク：OFF（消音）";
-        isMuted = true;
-    }
+    isMuted = !isMuted;
+    localAudio.track.enabled = !isMuted;
+    muteButton.innerText = isMuted ? "マイク：OFF（消音）" : "マイク：ON";
 };
 
 cameraButton.onclick = () => {
     if (!localVideoTrack) return;
-    
-    if (isCameraOff) {
-        // カメラ再開
-        localVideoTrack.track.enabled = true; // trackプロパティのenabledを操作
-        cameraButton.innerText = "カメラ：ON";
-        isCameraOff = false;
-    } else {
-        // カメラ停止
-        localVideoTrack.track.enabled = false;
-        cameraButton.innerText = "カメラ：OFF（停止）";
-        isCameraOff = true;
-    }
+    isCameraOff = !isCameraOff;
+    localVideoTrack.track.enabled = !isCameraOff;
+    cameraButton.innerText = isCameraOff ? "カメラ：OFF（停止）" : "カメラ：ON";
 };
 
-
-
-
-
-
-
-
-// --- 5. メッセージ送信 ---
+// 5. チャット送信
 sendButton.onclick = () => {
     if (chatInput.value === "" || !dataStream) return;
-    try {
-        dataStream.write(chatInput.value); 
-        appendMessage(`自分: ${chatInput.value}`);
-        chatInput.value = "";
-    } catch (e) { console.warn("送信失敗"); }
+    dataStream.write(chatInput.value); 
+    appendMessage(`自分: ${chatInput.value}`);
+    chatInput.value = "";
 };
 
-// --- 6. 退出処理 ---
+// 6. 退出処理
 buttonLeave.onclick = async () => {
     if (!room || !me) return;
     await me.leave();
@@ -196,28 +146,21 @@ buttonLeave.onclick = async () => {
     remoteMediaArea.innerHTML = '';
     chatMessages.innerHTML = '';
     memberList.innerHTML = '';
-    
     if (localVideo.srcObject) {
         localVideo.srcObject.getTracks().forEach(track => track.stop());
         localVideo.srcObject = null;
     }
-    
-    muteButton.innerText = "マイク：ON";
-    cameraButton.innerText = "カメラ：ON";
-    muteButton.disabled = true;
-    cameraButton.disabled = true;
     buttonJoin.innerText = "入室する";
     buttonJoin.disabled = false;
     buttonLeave.disabled = true;
-    isMuted = false;
-    isCameraOff = false;
+    muteButton.disabled = true;
+    cameraButton.disabled = true;
 };
 
 function appendMessage(text) {
-    const messageElement = document.createElement('div');
-    messageElement.innerText = text;
-    messageElement.style.borderBottom = "1px solid #eee";
-    chatMessages.appendChild(messageElement);
+    const el = document.createElement('div');
+    el.innerText = text;
+    el.style.borderBottom = "1px solid #eee";
+    chatMessages.appendChild(el);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
-
