@@ -14,13 +14,48 @@
         button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; }
         button:disabled { background: #ccc; }
         #status { margin-top: 10px; font-size: 14px; color: #666; }
+
+
+    /* 既存のスタイルに追加 */
+    .server-status {
+        margin-top: 10px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    .status-lamp {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ccc; /* 初期状態はグレー（確認中） */
+    }
+    .status-online { background: #28a745; box-shadow: 0 0 5px #28a745; }
+    .status-offline { background: #dc3545; }
+    .status-loading { background: #ffc107; animation: blink 1s infinite; }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+
+
+
+
+
     </style>
 </head>
 <body>
 
+
     <div class="container">
         <h2>SkyWay P2P Test</h2>
+        <div class="server-status">
+            <div id="status-lamp" class="status-lamp status-loading"></div>
+            <span id="server-text">サーバー起動を確認中...</span>
+        </div>
     </div>
+
+
+
 
     <div class="video-grid" id="video-grid">
         <div class="video-wrapper">

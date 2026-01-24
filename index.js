@@ -12,6 +12,39 @@
     const localVideo = document.getElementById('local-video');
     const videoGrid = document.getElementById('video-grid');
 
+
+    const statusLamp = document.getElementById('status-lamp');
+    const serverText = document.getElementById('server-text');
+
+
+   // --- バックエンドの起動確認（ヘルスチェック） ---
+    async function checkBackend() {
+        try {
+            // トークン取得エンドポイントを叩いてみる（または専用の /health などがあればそれを使用）
+            const res = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=health-check`);
+            if (res.ok) {
+                statusLamp.className = 'status-lamp status-online';
+                serverText.innerText = "サーバー接続完了（起動中）";
+            } else {
+                throw new Error();
+            }
+        } catch (e) {
+            statusLamp.className = 'status-lamp status-offline';
+            serverText.innerText = "サーバーがオフラインまたは起動中...";
+            // 3秒ごとに再試行（Renderが起きるまで追いかける）
+            setTimeout(checkBackend, 3000);
+        }
+    }
+
+    // ページ読み込み時に実行
+    checkBackend();
+
+
+
+
+
+
+
     let me; 
     let videoPublish; // 映像の公開状態を管理
     let audioPublish; // 音声の公開状態を管理
