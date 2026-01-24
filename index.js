@@ -73,33 +73,40 @@
         }
     };
 
-    // --- カメラON/OFFボタンの処理 ---
-    videoBtn.onclick = async () => {
-        if (!videoPublish) return;
-        if (videoPublish.state === 'enabled') {
-            await videoPublish.disable(); // 通信を無効化
-            videoBtn.innerText = "カメラをONにする";
-            videoBtn.style.background = "#28a745"; // ONにするための緑色
-        } else {
-            await videoPublish.enable(); // 通信を有効化
-            videoBtn.innerText = "カメラをOFFにする";
-            videoBtn.style.background = "#6c757d"; // OFFにするための灰色
-        }
-    };
 
-    // --- マイクON/OFFボタンの処理 ---
-    audioBtn.onclick = async () => {
-        if (!audioPublish) return;
-        if (audioPublish.state === 'enabled') {
-            await audioPublish.disable();
-            audioBtn.innerText = "マイクをONにする";
-            audioBtn.style.background = "#28a745";
-        } else {
-            await audioPublish.enable();
-            audioBtn.innerText = "マイクをOFFにする";
-            audioBtn.style.background = "#6c757d";
-        }
-    };
+
+
+    // --- カメラON/OFFボタンの処理 ---
+videoBtn.onclick = async () => {
+    if (!videoPublish) return;
+    if (videoPublish.state === 'enabled') {
+        await videoPublish.disable(); // 通信を停止
+        videoBtn.innerText = "カメラOFF";
+        videoBtn.style.background = "#6c757d"; // OFF時はグレー
+    } else {
+        await videoPublish.enable(); // 通信を再開
+        videoBtn.innerText = "カメラON";
+        videoBtn.style.background = "#28a745"; // ON時は緑
+    }
+};
+
+// --- マイクON/OFFボタンの処理 ---
+audioBtn.onclick = async () => {
+    if (!audioPublish) return;
+    if (audioPublish.state === 'enabled') {
+        await audioPublish.disable(); // ミュート
+        audioBtn.innerText = "マイクOFF";
+        audioBtn.style.background = "#6c757d"; // OFF時はグレー
+    } else {
+        await audioPublish.enable(); // 解除
+        audioBtn.innerText = "マイクON";
+        audioBtn.style.background = "#28a745"; // ON時は緑
+    }
+};
+
+
+
+
 
     leaveBtn.onclick = async () => {
         if (!me) return;
