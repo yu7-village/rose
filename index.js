@@ -1,5 +1,24 @@
 
 (async () => {
+
+
+
+const chatContainer = document.getElementById('chat-container');
+const chatMessages = document.getElementById('chat-messages');
+const chatInput = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+let dataPublish; // チャットデータ用のパブリケーション
+
+// --- メッセージを表示する補助関数 ---
+function appendMessage(sender, text) {
+    const msg = document.createElement('div');
+    msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    chatMessages.appendChild(msg);
+    chatMessages.scrollTop = chatMessages.scrollHeight; // 常に最新を表示
+}
+
+
+
     const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = await import('https://cdn.jsdelivr.net/npm/@skyway-sdk/room@latest/+esm');
 
     const BACKEND_URL = "https://skyway-token-backend.onrender.com";
@@ -62,6 +81,46 @@
             const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: ROOM_NAME });
             
             me = await room.join(); // ここで me を確定させる
+
+
+
+
+
+
+// --- startBtn.onclick の中、me = await room.join(); の後あたりに追加 ---
+// 1. データ送信用ストリームの作成とパブリッシュ
+const dataStream = await SkyWayStreamFactory.createDataStream();
+dataPublish = await me.publish(dataStream);
+chatContainer.style.display = 'block';
+
+// 2. 相手からのチャット（データ）を受信する処理
+const subscribeData = async (pub) => {
+    if (pub.publisher.id === me.id) return;
+    if (pub.contentType === 'data') {
+        const { stream } = await me.subscribe(pub.id);
+        stream.onData.add((data) => {
+            appendMessage(`相手(${pub.publisher.id.substring(0,5)})`, data);
+        });
+    }
+};
+
+// 既存の subscribe 処理と並行して実行
+room.publications.forEach(subscribeData);
+room.onStreamPublished.add((e) => subscribeData(e.publication));
+
+// 3. 送信ボタンの処理
+sendBtn.onclick = () => {
+    const text = chatInput.value;
+    if (!text) return;
+    dataStream.write(text); // データを送信
+    appendMessage("自分", text);
+    chatInput.value = "";
+};
+
+
+
+
+
 
             // 参加者リストの初期化とイベント登録
             updateMemberList(room);

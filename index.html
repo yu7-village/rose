@@ -54,6 +54,18 @@
         <div id="status">準備完了</div>
     </div>
 
+    <div id="chat-container" style="margin-top: 20px; width: 100%; max-width: 1000px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none;">
+        <div id="chat-messages" style="height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; font-size: 14px; text-align: left; background: #fafafa;">
+            </div>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="chat-input" placeholder="メッセージを入力..." style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+            <button id="send-btn" style="padding: 8px 16px; font-size: 14px;">送信</button>
+        </div>
+    </div>
+
+
+
+
     <script type="module" src="index.js"></script>
 </body>
 </html>
