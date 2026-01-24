@@ -5,17 +5,23 @@
     const ROOM_NAME = "p2p-room";
 
     const startBtn = document.getElementById('start-btn');
-    const leaveBtn = document.getElementById('leave-btn'); // 追加
+    const leaveBtn = document.getElementById('leave-btn');
+    const videoBtn = document.getElementById('toggle-video-btn'); // HTMLに追加が必要
+    const audioBtn = document.getElementById('toggle-audio-btn'); // HTMLに追加が必要
     const statusDiv = document.getElementById('status');
     const localVideo = document.getElementById('local-video');
     const videoGrid = document.getElementById('video-grid');
 
-    let me; // 退室時にも使うため、外で定義します
+    let me; 
+    let videoPublish; // 映像の公開状態を管理
+    let audioPublish; // 音声の公開状態を管理
 
     startBtn.onclick = async () => {
         try {
-            startBtn.style.display = 'none'; // 開始ボタンを隠す
-            leaveBtn.style.display = 'inline-block'; // 終了ボタンを出す
+            startBtn.style.display = 'none';
+            leaveBtn.style.display = 'inline-block';
+            videoBtn.style.display = 'inline-block';
+            audioBtn.style.display = 'inline-block';
             statusDiv.innerText = "接続中...";
 
             const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${ROOM_NAME}`);
@@ -27,21 +33,24 @@
                 name: ROOM_NAME,
             });
             
-            me = await room.join(); // 変数 me に格納
+            me = await room.join();
 
             const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
             video.attach(localVideo);
-            await me.publish(audio);
-            await me.publish(video);
+            
+            // 公開情報を変数に保存
+            audioPublish = await me.publish(audio); 
+            videoPublish = await me.publish(video);
 
             statusDiv.innerText = "通話中";
 
+            // 相手の受信処理
             const subscribe = async (pub) => {
                 if (pub.publisher.id === me.id) return;
                 const { stream } = await me.subscribe(pub.id);
                 if (stream.contentType === 'video') {
                     const newVideo = document.createElement('video');
-                    newVideo.id = `video-${pub.publisher.id}`; // 削除用にIDを付与
+                    newVideo.id = `video-${pub.publisher.id}`; 
                     newVideo.autoplay = true;
                     newVideo.playsInline = true;
                     stream.attach(newVideo);
@@ -52,7 +61,6 @@
             room.publications.forEach(subscribe);
             room.onStreamPublished.add((e) => subscribe(e.publication));
             
-            // 相手が退出した時に映像を消す処理
             room.onMemberLeft.add((e) => {
                 const v = document.getElementById(`video-${e.member.id}`);
                 if (v) v.remove();
@@ -62,24 +70,44 @@
             console.error(e);
             statusDiv.innerText = "エラー: " + e.message;
             startBtn.style.display = 'inline-block';
-            leaveBtn.style.display = 'none';
         }
     };
 
-    // --- 退室ボタンが押された時の処理 ---
+    // --- カメラON/OFFボタンの処理 ---
+    videoBtn.onclick = async () => {
+        if (!videoPublish) return;
+        if (videoPublish.state === 'enabled') {
+            await videoPublish.disable(); // 通信を無効化
+            videoBtn.innerText = "カメラをONにする";
+            videoBtn.style.background = "#28a745"; // ONにするための緑色
+        } else {
+            await videoPublish.enable(); // 通信を有効化
+            videoBtn.innerText = "カメラをOFFにする";
+            videoBtn.style.background = "#6c757d"; // OFFにするための灰色
+        }
+    };
+
+    // --- マイクON/OFFボタンの処理 ---
+    audioBtn.onclick = async () => {
+        if (!audioPublish) return;
+        if (audioPublish.state === 'enabled') {
+            await audioPublish.disable();
+            audioBtn.innerText = "マイクをONにする";
+            audioBtn.style.background = "#28a745";
+        } else {
+            await audioPublish.enable();
+            audioBtn.innerText = "マイクをOFFにする";
+            audioBtn.style.background = "#6c757d";
+        }
+    };
+
     leaveBtn.onclick = async () => {
         if (!me) return;
-
-        statusDiv.innerText = "退室中...";
-        
         try {
-            // SkyWayのルームから退室
             await me.leave();
-            // 画面をリロードして全ての状態をリセット
-            location.reload(); 
+            location.reload();
         } catch (e) {
-            console.error(e);
-            location.reload(); // エラーが起きてもリロードして強制終了
+            location.reload();
         }
     };
 })();
