@@ -140,6 +140,38 @@ audioBtn.onclick = async () => {
 
 
 
+// --- 参加者表示を更新する関数 ---
+function updateMemberList(room) {
+    const memberCount = document.getElementById('member-count');
+    const memberIdsDiv = document.getElementById('member-ids');
+    const container = document.getElementById('member-list-container');
+
+    container.style.display = 'block';
+    
+    // 現在のメンバー一覧を取得
+    const members = room.members;
+    memberCount.innerText = members.length;
+
+    // メンバーIDのリストを作成（先頭5文字を表示）
+    memberIdsDiv.innerText = members.map(m => `ID: ${m.id.substring(0, 5)}${m.id === me.id ? ' (自分)' : ''}`).join(', ');
+}
+
+// --- startBtn.onclick の中、me = await room.join(); の後に追加 ---
+me = await room.join();
+updateMemberList(room); // 初回表示
+
+// 誰かが新しく入ってきたら更新
+room.onMemberJoined.add(() => updateMemberList(room));
+
+// 誰かがいなくなったら更新
+room.onMemberLeft.add((e) => {
+    updateMemberList(room);
+    const v = document.getElementById(`video-${e.member.id}`);
+    if (v) v.remove();
+});
+
+
+
 
     leaveBtn.onclick = async () => {
         if (!me) return;
