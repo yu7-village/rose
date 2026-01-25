@@ -8,10 +8,11 @@
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding: 20px; margin: 0; }
         .main-layout { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1200px; gap: 20px; }
 
-        /* レイアウトの肝：row-reverse で左右を入れ替え */
+        /* レイアウトの基本：PCでは「ボタン左(下)・情報右(上)」 */
+        /* row-reverseを使っているため、HTMLの記述順と見た目が逆になります */
         .controls-wrapper { 
             display: flex; 
-            flex-direction: row-reverse; /* 右に情報、左にボタン */
+            flex-direction: row-reverse; 
             align-items: flex-start; 
             justify-content: center; 
             gap: 20px; 
@@ -19,7 +20,25 @@
             flex-wrap: wrap; 
         }
 
-        /* 右側（情報は右） */
+        /* 【重要】ブラウザ幅が狭い時（スマホ等）の切り替え */
+        @media (max-width: 600px) {
+            .controls-wrapper {
+                flex-direction: column; /* 縦並びに変更 */
+                align-items: center;
+            }
+            .button-group {
+                order: 1; /* ボタンを上に配置 */
+                width: 100%;
+                align-items: center;
+            }
+            .info-panel {
+                order: 2; /* 情報を下に配置 */
+                width: 100%;
+                max-width: 320px;
+            }
+        }
+
+        /* 情報パネル */
         .info-panel { 
             background: white; 
             padding: 15px; 
@@ -29,7 +48,7 @@
             text-align: left; 
         }
 
-        /* 左側（ボタンは左） */
+        /* ボタン操作エリア */
         .button-group { display: flex; flex-direction: column; gap: 10px; }
         button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; min-width: 180px; }
         
@@ -47,7 +66,7 @@
         .chat-input-group { display: flex; gap: 5px; }
         input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
 
-        /* ビデオ */
+        /* ビデオグリッド */
         .video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; width: 100%; margin-top: 20px; }
         .video-wrapper { background: #222; border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 4/3; }
         video { width: 100%; height: 100%; object-fit: cover; }
