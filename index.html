@@ -6,14 +6,12 @@
     <title>SkyWay V3 P2P Video Chat</title>
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding: 20px; margin: 0; }
-        
-        /* 全体コンテナ */
         .main-layout { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1200px; gap: 20px; }
 
-        /* 上部操作エリア：左に情報、右にボタン */
+        /* レイアウトの肝：row-reverse で左右を入れ替え */
         .controls-wrapper { 
             display: flex; 
-            flex-direction: row; 
+            flex-direction: row-reverse; /* 右に情報、左にボタン */
             align-items: flex-start; 
             justify-content: center; 
             gap: 20px; 
@@ -21,7 +19,7 @@
             flex-wrap: wrap; 
         }
 
-        /* 左側：サーバー・参加者・チャットパネル */
+        /* 右側（情報は右） */
         .info-panel { 
             background: white; 
             padding: 15px; 
@@ -31,11 +29,10 @@
             text-align: left; 
         }
 
-        /* 右側：ボタン操作エリア */
+        /* 左側（ボタンは左） */
         .button-group { display: flex; flex-direction: column; gap: 10px; }
         button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; min-width: 180px; }
-        button:disabled { background: #ccc; }
-
+        
         /* ステータスランプ */
         .server-status { font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
         .status-lamp { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
@@ -50,7 +47,7 @@
         .chat-input-group { display: flex; gap: 5px; }
         input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
 
-        /* ビデオ表示 */
+        /* ビデオ */
         .video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; width: 100%; margin-top: 20px; }
         .video-wrapper { background: #222; border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 4/3; }
         video { width: 100%; height: 100%; object-fit: cover; }
