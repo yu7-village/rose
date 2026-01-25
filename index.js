@@ -1,29 +1,11 @@
 
 (async () => {
-
-
-
-const chatContainer = document.getElementById('chat-container');
-const chatMessages = document.getElementById('chat-messages');
-const chatInput = document.getElementById('chat-input');
-const sendBtn = document.getElementById('send-btn');
-let dataPublish; // チャットデータ用のパブリケーション
-
-// --- メッセージを表示する補助関数 ---
-function appendMessage(sender, text) {
-    const msg = document.createElement('div');
-    msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
-    chatMessages.appendChild(msg);
-    chatMessages.scrollTop = chatMessages.scrollHeight; // 常に最新を表示
-}
-
-
-
     const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = await import('https://cdn.jsdelivr.net/npm/@skyway-sdk/room@latest/+esm');
 
     const BACKEND_URL = "https://skyway-token-backend.onrender.com";
     const ROOM_NAME = "p2p-room";
 
+    // 要素の取得
     const startBtn = document.getElementById('start-btn');
     const leaveBtn = document.getElementById('leave-btn');
     const videoBtn = document.getElementById('toggle-video-btn');
@@ -33,10 +15,26 @@ function appendMessage(sender, text) {
     const videoGrid = document.getElementById('video-grid');
     const statusLamp = document.getElementById('status-lamp');
     const serverText = document.getElementById('server-text');
+    
+    // チャット要素
+    const chatContainer = document.getElementById('chat-container');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
 
     let me; 
     let videoPublish; 
     let audioPublish; 
+    let dataPublish;
+
+    // --- メッセージを表示する補助関数 ---
+    function appendMessage(sender, text) {
+        const msg = document.createElement('div');
+        msg.style.marginBottom = "5px";
+        msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
+        chatMessages.appendChild(msg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
     // --- バックエンド起動確認 ---
     async function checkBackend() {
@@ -54,7 +52,7 @@ function appendMessage(sender, text) {
     }
     checkBackend();
 
-    // --- 参加者表示を更新する関数 ---
+    // --- 参加者表示更新関数 ---
     function updateMemberList(room) {
         const memberCount = document.getElementById('member-count');
         const memberIdsDiv = document.getElementById('member-ids');
@@ -80,50 +78,46 @@ function appendMessage(sender, text) {
             const context = await SkyWayContext.Create(token);
             const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: ROOM_NAME });
             
-            me = await room.join(); // ここで me を確定させる
+            me = await room.join();
 
-
-
-
-
-
-// --- startBtn.onclick の中、me = await room.join(); の後あたりに追加 ---
-// 1. データ送信用ストリームの作成とパブリッシュ
-const dataStream = await SkyWayStreamFactory.createDataStream();
-dataPublish = await me.publish(dataStream);
-chatContainer.style.display = 'block';
-
-// 2. 相手からのチャット（データ）を受信する処理
-const subscribeData = async (pub) => {
-    if (pub.publisher.id === me.id) return;
-    if (pub.contentType === 'data') {
-        const { stream } = await me.subscribe(pub.id);
-        stream.onData.add((data) => {
-            appendMessage(`相手(${pub.publisher.id.substring(0,5)})`, data);
-        });
-    }
-};
-
-// 既存の subscribe 処理と並行して実行
-room.publications.forEach(subscribeData);
-room.onStreamPublished.add((e) => subscribeData(e.publication));
-
-// 3. 送信ボタンの処理
-sendBtn.onclick = () => {
-    const text = chatInput.value;
-    if (!text) return;
-    dataStream.write(text); // データを送信
-    appendMessage("自分", text);
-    chatInput.value = "";
-};
-
-
-
-
-
-
-            // 参加者リストの初期化とイベント登録
+            // チャットと参加者リストの表示
+            chatContainer.style.display = 'block';
             updateMemberList(room);
+
+            // データ(チャット)送信用設定
+            const dataStream = await SkyWayStreamFactory.createDataStream();
+            dataPublish = await me.publish(dataStream);
+
+            sendBtn.onclick = () => {
+                const text = chatInput.value;
+                if (!text) return;
+                dataStream.write(text);
+                appendMessage("自分", text);
+                chatInput.value = "";
+            };
+
+            // 受信処理をまとめる
+            const subscribe = async (pub) => {
+                if (pub.publisher.id === me.id) return;
+                const { stream } = await me.subscribe(pub.id);
+
+                if (pub.contentType === 'video') {
+                    const newVideo = document.createElement('video');
+                    newVideo.id = `video-${pub.publisher.id}`; 
+                    newVideo.autoplay = true;
+                    newVideo.playsInline = true;
+                    stream.attach(newVideo);
+                    videoGrid.appendChild(newVideo);
+                } else if (pub.contentType === 'data') {
+                    stream.onData.add((data) => {
+                        appendMessage(`相手(${pub.publisher.id.substring(0,5)})`, data);
+                    });
+                }
+            };
+
+            room.publications.forEach(subscribe);
+            room.onStreamPublished.add((e) => subscribe(e.publication));
+            
             room.onMemberJoined.add(() => updateMemberList(room));
             room.onMemberLeft.add((e) => {
                 updateMemberList(room);
@@ -131,28 +125,13 @@ sendBtn.onclick = () => {
                 if (v) v.remove();
             });
 
+            // 映像・音声公開
             const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
             video.attach(localVideo);
             audioPublish = await me.publish(audio); 
             videoPublish = await me.publish(video);
 
             statusDiv.innerText = "通話中";
-
-            const subscribe = async (pub) => {
-                if (pub.publisher.id === me.id) return;
-                const { stream } = await me.subscribe(pub.id);
-                if (stream.contentType === 'video') {
-                    const newVideo = document.createElement('video');
-                    newVideo.id = `video-${pub.publisher.id}`; 
-                    newVideo.autoplay = true;
-                    newVideo.playsInline = true;
-                    stream.attach(newVideo);
-                    videoGrid.appendChild(newVideo);
-                }
-            };
-
-            room.publications.forEach(subscribe);
-            room.onStreamPublished.add((e) => subscribe(e.publication));
 
         } catch (e) {
             console.error(e);
@@ -161,7 +140,7 @@ sendBtn.onclick = () => {
         }
     };
 
-    // --- ON/OFFボタン ---
+    // ON/OFFボタン
     videoBtn.onclick = async () => {
         if (!videoPublish) return;
         if (videoPublish.state === 'enabled') {

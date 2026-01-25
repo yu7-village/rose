@@ -5,66 +5,100 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SkyWay V3 P2P Video Chat</title>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding: 20px; }
-        .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; width: 100%; max-width: 400px; margin-bottom: 20px; }
-        .video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; width: 100%; max-width: 1000px; }
-        .video-wrapper { background: #222; border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 4/3; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        .label { position: absolute; bottom: 8px; left: 8px; color: white; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-        .controls { margin-top: 20px; text-align: center; }
-        button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; margin: 5px; }
-        button:disabled { background: #ccc; }
-        #status { margin-top: 10px; font-size: 14px; color: #666; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding: 20px; margin: 0; }
+        
+        /* 全体コンテナ */
+        .main-layout { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1200px; gap: 20px; }
 
-        /* サーバーステータス */
-        .server-status { margin-top: 10px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        /* 上部操作エリア：左に情報、右にボタン */
+        .controls-wrapper { 
+            display: flex; 
+            flex-direction: row; 
+            align-items: flex-start; 
+            justify-content: center; 
+            gap: 20px; 
+            width: 100%; 
+            flex-wrap: wrap; 
+        }
+
+        /* 左側：サーバー・参加者・チャットパネル */
+        .info-panel { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            width: 320px; 
+            text-align: left; 
+        }
+
+        /* 右側：ボタン操作エリア */
+        .button-group { display: flex; flex-direction: column; gap: 10px; }
+        button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; min-width: 180px; }
+        button:disabled { background: #ccc; }
+
+        /* ステータスランプ */
+        .server-status { font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
         .status-lamp { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
         .status-online { background: #28a745; box-shadow: 0 0 5px #28a745; }
         .status-offline { background: #dc3545; }
         .status-loading { background: #ffc107; animation: blink 1s infinite; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* チャットエリア */
+        #chat-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        #chat-messages { height: 180px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; font-size: 13px; background: #fafafa; border-radius: 4px; }
+        .chat-input-group { display: flex; gap: 5px; }
+        input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+        /* ビデオ表示 */
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; width: 100%; margin-top: 20px; }
+        .video-wrapper { background: #222; border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 4/3; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .label { position: absolute; bottom: 8px; left: 8px; color: white; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>SkyWay P2P Test</h2>
-        <div class="server-status">
-            <div id="status-lamp" class="status-lamp status-loading"></div>
-            <span id="server-text">サーバー起動を確認中...</span>
-        </div>
-        <div id="member-list-container" style="margin-top: 10px; font-size: 13px; color: #555; display: none;">
-            <span>参加中: </span><span id="member-count">0</span>名
-            <div id="member-ids" style="font-size: 11px; color: #888; margin-top: 4px;"></div>
-        </div>
-    </div>
+    <div class="main-layout">
+        <h2>SkyWay Video Chat</h2>
 
-    <div class="video-grid" id="video-grid">
-        <div class="video-wrapper">
-            <video id="local-video" autoplay muted playsinline></video>
-            <div class="label">自分 (Local)</div>
-        </div>
-    </div>
-    
-    <div class="controls">
-        <button id="start-btn">通話を開始する</button>
-        <button id="leave-btn" style="background: #dc3545; display: none;">終了</button>
-        <button id="toggle-video-btn" style="background: #28a745; display: none;">カメラON</button>
-        <button id="toggle-audio-btn" style="background: #28a745; display: none;">マイクON</button>
-        <div id="status">準備完了</div>
-    </div>
+        <div class="controls-wrapper">
+            <div class="info-panel">
+                <div class="server-status">
+                    <div id="status-lamp" class="status-lamp status-loading"></div>
+                    <span id="server-text">サーバー起動を確認中...</span>
+                </div>
 
-    <div id="chat-container" style="margin-top: 20px; width: 100%; max-width: 1000px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none;">
-        <div id="chat-messages" style="height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; font-size: 14px; text-align: left; background: #fafafa;">
+                <div id="member-list-container" style="display: none; border-top: 1px solid #eee; padding-top: 10px; margin-bottom: 10px;">
+                    <div style="font-size: 13px; color: #555; font-weight: bold;">参加中: <span id="member-count">0</span>名</div>
+                    <div id="member-ids" style="font-size: 11px; color: #888; margin-top: 4px;"></div>
+                </div>
+
+                <div id="chat-container" style="display: none;">
+                    <div id="chat-messages"></div>
+                    <div class="chat-input-group">
+                        <input type="text" id="chat-input" placeholder="メッセージ...">
+                        <button id="send-btn" style="min-width: auto; padding: 8px 12px; font-size: 12px;">送信</button>
+                    </div>
+                </div>
             </div>
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="chat-input" placeholder="メッセージを入力..." style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-            <button id="send-btn" style="padding: 8px 16px; font-size: 14px;">送信</button>
+
+            <div class="button-group">
+                <button id="start-btn">通話を開始する</button>
+                <button id="toggle-video-btn" style="background: #28a745; display: none;">カメラON</button>
+                <button id="toggle-audio-btn" style="background: #28a745; display: none;">マイクON</button>
+                <button id="leave-btn" style="background: #dc3545; display: none;">終了</button>
+                <div id="status" style="font-size: 12px; color: #888; margin-top: 5px; text-align: center;">準備完了</div>
+            </div>
+        </div>
+
+        <div class="video-grid" id="video-grid">
+            <div class="video-wrapper">
+                <video id="local-video" autoplay muted playsinline></video>
+                <div class="label">自分 (Local)</div>
+            </div>
         </div>
     </div>
-
-
-
 
     <script type="module" src="index.js"></script>
 </body>
