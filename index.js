@@ -142,7 +142,7 @@
             audioPublish = await me.publish(audio); 
             videoPublish = await me.publish(video);
 
-            statusDiv.innerText = "通話中: " + roomName;
+            statusDiv.innerText = "通話中 Room名 : " + roomName;
 
         } catch (e) {
             console.error(e);
