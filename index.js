@@ -1,15 +1,14 @@
-
 (async () => {
     const { SkyWayContext, SkyWayRoom, SkyWayStreamFactory } = await import('https://cdn.jsdelivr.net/npm/@skyway-sdk/room@latest/+esm');
 
     const BACKEND_URL = "https://skyway-token-backend.onrender.com";
-    const ROOM_NAME = "p2p-room";
 
     // 要素の取得
     const startBtn = document.getElementById('start-btn');
     const leaveBtn = document.getElementById('leave-btn');
     const videoBtn = document.getElementById('toggle-video-btn');
     const audioBtn = document.getElementById('toggle-audio-btn');
+    const roomNameInput = document.getElementById('room-name-input');
     const statusDiv = document.getElementById('status');
     const localVideo = document.getElementById('local-video');
     const videoGrid = document.getElementById('video-grid');
@@ -33,10 +32,10 @@
         msg.style.marginBottom = "5px";
         msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
         chatMessages.appendChild(msg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        chatMessages.scrollTop = chatMessages.scrollHeight; // 常に最新を表示
     }
 
-    // --- バックエンド起動確認 ---
+    // --- バックエンド起動確認（ヘルスチェック） ---
     async function checkBackend() {
         try {
             const res = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=health-check`);
@@ -47,44 +46,55 @@
         } catch (e) {
             statusLamp.className = 'status-lamp status-offline';
             serverText.innerText = "サーバーがオフラインまたは起動中...";
-            setTimeout(checkBackend, 3000);
+            setTimeout(checkBackend, 3000); // 3秒ごとに再試行
         }
     }
     checkBackend();
 
-    // --- 参加者表示更新関数 ---
+    // --- 参加者表示を更新する関数 ---
     function updateMemberList(room) {
         const memberCount = document.getElementById('member-count');
         const memberIdsDiv = document.getElementById('member-ids');
         const container = document.getElementById('member-list-container');
         if (!me) return;
+        
         container.style.display = 'block';
         const members = room.members;
         memberCount.innerText = members.length;
         memberIdsDiv.innerText = members.map(m => `ID: ${m.id.substring(0, 5)}${m.id === me.id ? ' (自分)' : ''}`).join(', ');
     }
 
+    // --- 通話開始ボタンの処理 ---
     startBtn.onclick = async () => {
+        // 入力されたルーム名を取得（空ならデフォルトを使用）
+        const roomName = roomNameInput.value.trim() || "p2p-room";
+
         try {
             startBtn.style.display = 'none';
+            roomNameInput.style.display = 'none'; // 入力欄を隠す
             leaveBtn.style.display = 'inline-block';
             videoBtn.style.display = 'inline-block';
             audioBtn.style.display = 'inline-block';
-            statusDiv.innerText = "接続中...";
+            statusDiv.innerText = `ルーム「${roomName}」に接続中...`;
 
-            const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${ROOM_NAME}`);
+            // トークンの取得（ルーム名を含める）
+            const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomName}`);
             const { token } = await response.json();
 
+            // SkyWayの初期化
             const context = await SkyWayContext.Create(token);
-            const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: ROOM_NAME });
+            const room = await SkyWayRoom.FindOrCreate(context, {
+                type: 'p2p',
+                name: roomName,
+            });
             
             me = await room.join();
 
-            // チャットと参加者リストの表示
+            // UIの表示
             chatContainer.style.display = 'block';
             updateMemberList(room);
 
-            // データ(チャット)送信用設定
+            // データ(チャット)送信用ストリーム
             const dataStream = await SkyWayStreamFactory.createDataStream();
             dataPublish = await me.publish(dataStream);
 
@@ -96,7 +106,7 @@
                 chatInput.value = "";
             };
 
-            // 受信処理をまとめる
+            // ストリーム受信処理
             const subscribe = async (pub) => {
                 if (pub.publisher.id === me.id) return;
                 const { stream } = await me.subscribe(pub.id);
@@ -118,6 +128,7 @@
             room.publications.forEach(subscribe);
             room.onStreamPublished.add((e) => subscribe(e.publication));
             
+            // 参加・退出イベント
             room.onMemberJoined.add(() => updateMemberList(room));
             room.onMemberLeft.add((e) => {
                 updateMemberList(room);
@@ -125,22 +136,23 @@
                 if (v) v.remove();
             });
 
-            // 映像・音声公開
+            // 映像・音声の公開
             const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
             video.attach(localVideo);
             audioPublish = await me.publish(audio); 
             videoPublish = await me.publish(video);
 
-            statusDiv.innerText = "通話中";
+            statusDiv.innerText = "通話中: " + roomName;
 
         } catch (e) {
             console.error(e);
             statusDiv.innerText = "エラー: " + e.message;
             startBtn.style.display = 'inline-block';
+            roomNameInput.style.display = 'inline-block';
         }
     };
 
-    // ON/OFFボタン
+    // --- カメラON/OFFボタン ---
     videoBtn.onclick = async () => {
         if (!videoPublish) return;
         if (videoPublish.state === 'enabled') {
@@ -154,6 +166,7 @@
         }
     };
 
+    // --- マイクON/OFFボタン ---
     audioBtn.onclick = async () => {
         if (!audioPublish) return;
         if (audioPublish.state === 'enabled') {
@@ -167,8 +180,9 @@
         }
     };
 
+    // --- 退出ボタン ---
     leaveBtn.onclick = async () => {
         if (me) await me.leave();
-        location.reload();
+        location.reload(); // 全てリセットして初期状態へ
     };
 })();
