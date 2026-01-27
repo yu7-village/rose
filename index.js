@@ -3,7 +3,6 @@
 
     const BACKEND_URL = "https://skyway-token-backend.onrender.com";
 
-    // 要素の取得
     const startBtn = document.getElementById('start-btn');
     const leaveBtn = document.getElementById('leave-btn');
     const videoBtn = document.getElementById('toggle-video-btn');
@@ -14,8 +13,6 @@
     const videoGrid = document.getElementById('video-grid');
     const statusLamp = document.getElementById('status-lamp');
     const serverText = document.getElementById('server-text');
-    
-    // チャット要素
     const chatContainer = document.getElementById('chat-container');
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
@@ -25,6 +22,18 @@
     let videoPublish; 
     let audioPublish; 
     let dataPublish;
+    let isAlerted = false; // アラートの二重表示防止
+
+    // 共通のエラー通知関数
+    function notifyError(msg) {
+        console.error("Critical Error:", msg);
+        statusDiv.style.color = "#dc3545";
+        statusDiv.innerText = `エラー: ${msg} 再読み込みしてください。`;
+        if (!isAlerted) {
+            alert(msg + "\nページを再読み込みして再接続してください。");
+            isAlerted = true;
+        }
+    }
 
     function appendMessage(sender, text) {
         const msg = document.createElement('div');
@@ -54,19 +63,18 @@
         const memberIdsDiv = document.getElementById('member-ids');
         const container = document.getElementById('member-list-container');
         if (!me) return;
-        
         container.style.display = 'block';
         const members = room.members;
         memberCount.innerText = members.length;
         memberIdsDiv.innerText = members.map(m => `ID: ${m.id.substring(0, 5)}${m.id === me.id ? ' (自分)' : ''}`).join(', ');
     }
 
-    // --- 通話開始ボタンの処理 ---
     startBtn.onclick = async () => {
         const roomName = roomNameInput.value.trim() || "p2p-room";
+        isAlerted = false; // 接続開始時にフラグをリセット
 
         try {
-            statusDiv.style.color = "#888"; // 色を戻す
+            statusDiv.style.color = "#888";
             statusDiv.innerText = `ルーム「${roomName}」に接続中...`;
 
             const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomName}`);
@@ -74,25 +82,19 @@
 
             // 1. Context作成
             const context = await SkyWayContext.Create(token);
+            
+            // Context側のエラー監視（トークン切れなど）
+            context.onFatalError.add((error) => notifyError("認証の有効期限が切れました。"));
 
-            // 2. ★ここで即座に監視を開始（何よりも先に！）
-            context.onFatalError.add((error) => {
-                console.error("Fatal Error:", error);
-                statusDiv.style.color = "#dc3545";
-                statusDiv.style.fontWeight = "bold";
-                statusDiv.innerText = "エラー: 接続が切断されました。再読み込みしてください。";
-                alert("通信の有効期限が切れたか、致命的なエラーが発生しました。");
-            });
-
-            // 3. ルーム接続
-            const room = await SkyWayRoom.FindOrCreate(context, {
-                type: 'p2p',
-                name: roomName,
-            });
+            // 2. Room作成
+            const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: roomName });
+            
+            // Room側のエラー監視（シグナリング切断など）
+            room.onFatalError.add((error) => notifyError("サーバーとの接続が切断されました。"));
             
             me = await room.join();
 
-            // 成功したらUI切り替え
+            // UI切り替え
             startBtn.style.display = 'none';
             roomNameInput.style.display = 'none';
             leaveBtn.style.display = 'inline-block';
@@ -101,7 +103,6 @@
             chatContainer.style.display = 'block';
             updateMemberList(room);
 
-            // ストリーム公開と購読 (中略なしで記述)
             const dataStream = await SkyWayStreamFactory.createDataStream();
             dataPublish = await me.publish(dataStream);
 
@@ -124,9 +125,7 @@
                     stream.attach(newVideo);
                     videoGrid.appendChild(newVideo);
                 } else if (pub.contentType === 'data') {
-                    stream.onData.add((data) => {
-                        appendMessage(`相手(${pub.publisher.id.substring(0,5)})`, data);
-                    });
+                    stream.onData.add((data) => appendMessage(`相手(${pub.publisher.id.substring(0,5)})`, data));
                 }
             };
 
@@ -147,9 +146,8 @@
             statusDiv.innerText = "通話中 Room名 : " + roomName;
 
         } catch (e) {
-            console.error("Join Error:", e);
-            statusDiv.style.color = "#dc3545";
-            statusDiv.innerText = "エラーが発生しました: " + e.message;
+            console.error(e);
+            notifyError(e.message);
             startBtn.style.display = 'inline-block';
             roomNameInput.style.display = 'inline-block';
         }

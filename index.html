@@ -7,43 +7,15 @@
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding: 20px; margin: 0; }
         .main-layout { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1200px; gap: 20px; }
-
-        .controls-wrapper { 
-            display: flex; 
-            flex-direction: row-reverse; 
-            align-items: flex-start; 
-            justify-content: center; 
-            gap: 20px; 
-            width: 100%; 
-            flex-wrap: wrap; 
-        }
+        .controls-wrapper { display: flex; flex-direction: row-reverse; align-items: flex-start; justify-content: center; gap: 20px; width: 100%; flex-wrap: wrap; }
 
         @media (max-width: 600px) {
-            .controls-wrapper {
-                flex-direction: column; 
-                align-items: center;
-            }
-            .button-group {
-                order: 1; 
-                width: 100%;
-                align-items: center;
-            }
-            .info-panel {
-                order: 2; 
-                width: 100%;
-                max-width: 320px;
-            }
+            .controls-wrapper { flex-direction: column; align-items: center; }
+            .button-group { order: 1; width: 100%; align-items: center; }
+            .info-panel { order: 2; width: 100%; max-width: 320px; }
         }
 
-        .info-panel { 
-            background: white; 
-            padding: 15px; 
-            border-radius: 12px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
-            width: 320px; 
-            text-align: left; 
-        }
-
+        .info-panel { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 320px; text-align: left; }
         .button-group { display: flex; flex-direction: column; gap: 10px; }
         button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; min-width: 180px; }
         
@@ -69,19 +41,16 @@
 
     <div class="main-layout">
         <h2>SkyWay Video Chat</h2>
-
         <div class="controls-wrapper">
             <div class="info-panel">
                 <div class="server-status">
                     <div id="status-lamp" class="status-lamp status-loading"></div>
                     <span id="server-text">サーバー起動を確認中...</span>
                 </div>
-
                 <div id="member-list-container" style="display: none; border-top: 1px solid #eee; padding-top: 10px; margin-bottom: 10px;">
                     <div style="font-size: 13px; color: #555; font-weight: bold;">参加中: <span id="member-count">0</span>名</div>
                     <div id="member-ids" style="font-size: 11px; color: #888; margin-top: 4px;"></div>
                 </div>
-
                 <div id="chat-container" style="display: none;">
                     <div id="chat-messages"></div>
                     <div class="chat-input-group">
@@ -93,13 +62,12 @@
 
             <div class="button-group">
                 <input type="text" id="room-name-input" placeholder="ルーム名を入力（例: room1）" 
-                    style="padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
-                
+                       style="padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px;">
                 <button id="start-btn">通話を開始する</button>
                 <button id="toggle-video-btn" style="background: #28a745; display: none;">カメラON</button>
                 <button id="toggle-audio-btn" style="background: #28a745; display: none;">マイクON</button>
                 <button id="leave-btn" style="background: #dc3545; display: none;">終了</button>
-                <div id="status" style="font-size: 12px; color: #888; margin-top: 5px; text-align: center;">準備完了</div>
+                <div id="status" style="font-size: 14px; color: #888; margin-top: 5px; text-align: center; font-weight: bold;">準備完了</div>
             </div>
         </div>
 
