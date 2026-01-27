@@ -26,7 +26,6 @@
     let audioPublish; 
     let dataPublish;
 
-    // --- メッセージを表示する補助関数 ---
     function appendMessage(sender, text) {
         const msg = document.createElement('div');
         msg.style.marginBottom = "5px";
@@ -35,7 +34,6 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // --- バックエンド起動確認 ---
     async function checkBackend() {
         try {
             const res = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=health-check`);
@@ -51,7 +49,6 @@
     }
     checkBackend();
 
-    // --- 参加者表示を更新する関数 ---
     function updateMemberList(room) {
         const memberCount = document.getElementById('member-count');
         const memberIdsDiv = document.getElementById('member-ids');
@@ -69,33 +66,25 @@
         const roomName = roomNameInput.value.trim() || "p2p-room";
 
         try {
-            startBtn.style.display = 'none';
-            roomNameInput.style.display = 'none';
-            leaveBtn.style.display = 'inline-block';
-            videoBtn.style.display = 'inline-block';
-            audioBtn.style.display = 'inline-block';
+            statusDiv.style.color = "#888"; // 色を戻す
             statusDiv.innerText = `ルーム「${roomName}」に接続中...`;
 
-            // トークンの取得
             const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomName}`);
             const { token } = await response.json();
 
-            // SkyWayの初期化
+            // 1. Context作成
             const context = await SkyWayContext.Create(token);
 
-            // --- 接続状態の監視設定（エラー回避のため安全なプロパティアクセスに変更） ---
-            if (context) {
-                // fatalErrorが発生した際の処理
-                if (context.onFatalError) {
-                    context.onFatalError.add(() => {
-                        statusDiv.style.color = "#dc3545";
-                        statusDiv.innerText = "エラー: 接続が切断されました。";
-                        alert("通信の有効期限が切れたか、致命的なエラーが発生しました。");
-                    });
-                }
-            }
+            // 2. ★ここで即座に監視を開始（何よりも先に！）
+            context.onFatalError.add((error) => {
+                console.error("Fatal Error:", error);
+                statusDiv.style.color = "#dc3545";
+                statusDiv.style.fontWeight = "bold";
+                statusDiv.innerText = "エラー: 接続が切断されました。再読み込みしてください。";
+                alert("通信の有効期限が切れたか、致命的なエラーが発生しました。");
+            });
 
-            // ルームへの参加
+            // 3. ルーム接続
             const room = await SkyWayRoom.FindOrCreate(context, {
                 type: 'p2p',
                 name: roomName,
@@ -103,11 +92,16 @@
             
             me = await room.join();
 
-            // UIの表示
+            // 成功したらUI切り替え
+            startBtn.style.display = 'none';
+            roomNameInput.style.display = 'none';
+            leaveBtn.style.display = 'inline-block';
+            videoBtn.style.display = 'inline-block';
+            audioBtn.style.display = 'inline-block';
             chatContainer.style.display = 'block';
             updateMemberList(room);
 
-            // データ送信用ストリーム
+            // ストリーム公開と購読 (中略なしで記述)
             const dataStream = await SkyWayStreamFactory.createDataStream();
             dataPublish = await me.publish(dataStream);
 
@@ -119,11 +113,9 @@
                 chatInput.value = "";
             };
 
-            // ストリーム受信処理
             const subscribe = async (pub) => {
                 if (pub.publisher.id === me.id) return;
                 const { stream } = await me.subscribe(pub.id);
-
                 if (pub.contentType === 'video') {
                     const newVideo = document.createElement('video');
                     newVideo.id = `video-${pub.publisher.id}`; 
@@ -140,7 +132,6 @@
 
             room.publications.forEach(subscribe);
             room.onStreamPublished.add((e) => subscribe(e.publication));
-            
             room.onMemberJoined.add(() => updateMemberList(room));
             room.onMemberLeft.add((e) => {
                 updateMemberList(room);
@@ -148,24 +139,22 @@
                 if (v) v.remove();
             });
 
-            // 映像・音声の公開
             const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
             video.attach(localVideo);
             audioPublish = await me.publish(audio); 
             videoPublish = await me.publish(video);
 
-            statusDiv.style.color = "#888";
             statusDiv.innerText = "通話中 Room名 : " + roomName;
 
         } catch (e) {
-            console.error(e);
-            statusDiv.innerText = "エラー: " + e.message;
+            console.error("Join Error:", e);
+            statusDiv.style.color = "#dc3545";
+            statusDiv.innerText = "エラーが発生しました: " + e.message;
             startBtn.style.display = 'inline-block';
             roomNameInput.style.display = 'inline-block';
         }
     };
 
-    // --- カメラON/OFFボタン ---
     videoBtn.onclick = async () => {
         if (!videoPublish) return;
         if (videoPublish.state === 'enabled') {
@@ -179,7 +168,6 @@
         }
     };
 
-    // --- マイクON/OFFボタン ---
     audioBtn.onclick = async () => {
         if (!audioPublish) return;
         if (audioPublish.state === 'enabled') {
@@ -193,7 +181,6 @@
         }
     };
 
-    // --- 退出ボタン ---
     leaveBtn.onclick = async () => {
         if (me) await me.leave();
         location.reload();
