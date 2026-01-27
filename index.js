@@ -90,6 +90,25 @@
             
             me = await room.join();
 
+
+// --- SkyWayの状態監視（トークン切れなどの検知） ---
+context.onFatalError.add((error) => {
+    console.error("Fatal Error:", error);
+    statusDiv.style.color = "#dc3545"; // 文字を赤くする
+    statusDiv.innerText = "エラー: 接続が切断されました。ページを再読み込みしてください。";
+    
+    // ユーザーにアラートで通知
+    alert("通信の有効期限が切れたか、致命的なエラーが発生しました。再接続してください。");
+});
+
+// トークンの期限が近づいた時の処理（必要に応じて）
+context.onTokenExpiresSoon.add(() => {
+    statusDiv.style.color = "#ffc107"; // 文字をオレンジにする
+    statusDiv.innerText = "警告: まもなく接続期限が切れます。";
+});
+
+
+
             // UIの表示
             chatContainer.style.display = 'block';
             updateMemberList(room);
