@@ -22,13 +22,15 @@
     let videoPublish; 
     let audioPublish; 
     let dataPublish;
-    let isAlerted = false; // アラートの二重表示防止
+    let isAlerted = false; // アラートの二重表示防止フラグ
 
     // 共通のエラー通知関数
     function notifyError(msg) {
         console.error("Critical Error:", msg);
-        statusDiv.style.color = "#dc3545";
-        statusDiv.innerText = `エラー: ${msg} 再読み込みしてください。`;
+        if (statusDiv) {
+            statusDiv.style.color = "#dc3545"; // 文字を赤くする
+            statusDiv.innerText = `エラー: ${msg} 再読み込みしてください。`;
+        }
         if (!isAlerted) {
             alert(msg + "\nページを再読み込みして再接続してください。");
             isAlerted = true;
@@ -43,6 +45,7 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
+    // バックエンド起動確認
     async function checkBackend() {
         try {
             const res = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=health-check`);
@@ -71,26 +74,31 @@
 
     startBtn.onclick = async () => {
         const roomName = roomNameInput.value.trim() || "p2p-room";
-        isAlerted = false; // 接続開始時にフラグをリセット
+        isAlerted = false; 
 
         try {
             statusDiv.style.color = "#888";
             statusDiv.innerText = `ルーム「${roomName}」に接続中...`;
 
+            // バックエンドからトークンを取得
             const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomName}`);
             const { token } = await response.json();
 
             // 1. Context作成
             const context = await SkyWayContext.Create(token);
             
-            // Context側のエラー監視（トークン切れなど）
-            context.onFatalError.add((error) => notifyError("認証の有効期限が切れました。"));
+            // 【安全策】Context側のエラー監視（addが存在するか確認）
+            if (context.onFatalError && typeof context.onFatalError.add === 'function') {
+                context.onFatalError.add(() => notifyError("認証の有効期限が切れました。"));
+            }
 
             // 2. Room作成
             const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: roomName });
             
-            // Room側のエラー監視（シグナリング切断など）
-            room.onFatalError.add((error) => notifyError("サーバーとの接続が切断されました。"));
+            // 【安全策】Room側のエラー監視（addが存在するか確認）
+            if (room.onFatalError && typeof room.onFatalError.add === 'function') {
+                room.onFatalError.add(() => notifyError("通信が切断されました。"));
+            }
             
             me = await room.join();
 
@@ -147,7 +155,7 @@
 
         } catch (e) {
             console.error(e);
-            notifyError(e.message);
+            notifyError("接続に失敗しました: " + e.message);
             startBtn.style.display = 'inline-block';
             roomNameInput.style.display = 'inline-block';
         }
