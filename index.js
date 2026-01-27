@@ -83,18 +83,17 @@
             // SkyWayの初期化
             const context = await SkyWayContext.Create(token);
 
-            // --- 接続状態の監視設定 ---
-            context.onFatalError.add((error) => {
-                console.error("Fatal Error:", error);
-                statusDiv.style.color = "#dc3545";
-                statusDiv.innerText = "エラー: 接続が切断されました。再読み込みしてください。";
-                alert("通信の有効期限が切れたか、致命的なエラーが発生しました。");
-            });
-
-            context.onTokenExpiresSoon.add(() => {
-                statusDiv.style.color = "#ffc107";
-                statusDiv.innerText = "警告: まもなく接続期限が切れます。";
-            });
+            // --- 接続状態の監視設定（エラー回避のため安全なプロパティアクセスに変更） ---
+            if (context) {
+                // fatalErrorが発生した際の処理
+                if (context.onFatalError) {
+                    context.onFatalError.add(() => {
+                        statusDiv.style.color = "#dc3545";
+                        statusDiv.innerText = "エラー: 接続が切断されました。";
+                        alert("通信の有効期限が切れたか、致命的なエラーが発生しました。");
+                    });
+                }
+            }
 
             // ルームへの参加
             const room = await SkyWayRoom.FindOrCreate(context, {
