@@ -32,10 +32,10 @@
         msg.style.marginBottom = "5px";
         msg.innerHTML = `<strong>${sender}:</strong> ${text}`;
         chatMessages.appendChild(msg);
-        chatMessages.scrollTop = chatMessages.scrollHeight; // 常に最新を表示
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // --- バックエンド起動確認（ヘルスチェック） ---
+    // --- バックエンド起動確認 ---
     async function checkBackend() {
         try {
             const res = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=health-check`);
@@ -46,7 +46,7 @@
         } catch (e) {
             statusLamp.className = 'status-lamp status-offline';
             serverText.innerText = "サーバーがオフラインまたは起動中...";
-            setTimeout(checkBackend, 3000); // 3秒ごとに再試行
+            setTimeout(checkBackend, 3000);
         }
     }
     checkBackend();
@@ -66,23 +66,37 @@
 
     // --- 通話開始ボタンの処理 ---
     startBtn.onclick = async () => {
-        // 入力されたルーム名を取得（空ならデフォルトを使用）
         const roomName = roomNameInput.value.trim() || "p2p-room";
 
         try {
             startBtn.style.display = 'none';
-            roomNameInput.style.display = 'none'; // 入力欄を隠す
+            roomNameInput.style.display = 'none';
             leaveBtn.style.display = 'inline-block';
             videoBtn.style.display = 'inline-block';
             audioBtn.style.display = 'inline-block';
             statusDiv.innerText = `ルーム「${roomName}」に接続中...`;
 
-            // トークンの取得（ルーム名を含める）
+            // トークンの取得
             const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomName}`);
             const { token } = await response.json();
 
             // SkyWayの初期化
             const context = await SkyWayContext.Create(token);
+
+            // --- 接続状態の監視設定 ---
+            context.onFatalError.add((error) => {
+                console.error("Fatal Error:", error);
+                statusDiv.style.color = "#dc3545";
+                statusDiv.innerText = "エラー: 接続が切断されました。再読み込みしてください。";
+                alert("通信の有効期限が切れたか、致命的なエラーが発生しました。");
+            });
+
+            context.onTokenExpiresSoon.add(() => {
+                statusDiv.style.color = "#ffc107";
+                statusDiv.innerText = "警告: まもなく接続期限が切れます。";
+            });
+
+            // ルームへの参加
             const room = await SkyWayRoom.FindOrCreate(context, {
                 type: 'p2p',
                 name: roomName,
@@ -90,30 +104,11 @@
             
             me = await room.join();
 
-
-// --- SkyWayの状態監視（トークン切れなどの検知） ---
-context.onFatalError.add((error) => {
-    console.error("Fatal Error:", error);
-    statusDiv.style.color = "#dc3545"; // 文字を赤くする
-    statusDiv.innerText = "エラー: 接続が切断されました。ページを再読み込みしてください。";
-    
-    // ユーザーにアラートで通知
-    alert("通信の有効期限が切れたか、致命的なエラーが発生しました。再接続してください。");
-});
-
-// トークンの期限が近づいた時の処理（必要に応じて）
-context.onTokenExpiresSoon.add(() => {
-    statusDiv.style.color = "#ffc107"; // 文字をオレンジにする
-    statusDiv.innerText = "警告: まもなく接続期限が切れます。";
-});
-
-
-
             // UIの表示
             chatContainer.style.display = 'block';
             updateMemberList(room);
 
-            // データ(チャット)送信用ストリーム
+            // データ送信用ストリーム
             const dataStream = await SkyWayStreamFactory.createDataStream();
             dataPublish = await me.publish(dataStream);
 
@@ -147,7 +142,6 @@ context.onTokenExpiresSoon.add(() => {
             room.publications.forEach(subscribe);
             room.onStreamPublished.add((e) => subscribe(e.publication));
             
-            // 参加・退出イベント
             room.onMemberJoined.add(() => updateMemberList(room));
             room.onMemberLeft.add((e) => {
                 updateMemberList(room);
@@ -161,6 +155,7 @@ context.onTokenExpiresSoon.add(() => {
             audioPublish = await me.publish(audio); 
             videoPublish = await me.publish(video);
 
+            statusDiv.style.color = "#888";
             statusDiv.innerText = "通話中 Room名 : " + roomName;
 
         } catch (e) {
@@ -202,6 +197,6 @@ context.onTokenExpiresSoon.add(() => {
     // --- 退出ボタン ---
     leaveBtn.onclick = async () => {
         if (me) await me.leave();
-        location.reload(); // 全てリセットして初期状態へ
+        location.reload();
     };
 })();
