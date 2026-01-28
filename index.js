@@ -22,13 +22,14 @@
     let videoPublish; 
     let audioPublish; 
     let dataPublish;
-    let isAlerted = false; // アラートの二重表示防止フラグ
+    let isAlerted = false; 
+    let reconnectionTimer = null; // 再接続待ち用タイマー
 
-    // 共通のエラー通知関数
+    // エラー通知関数
     function notifyError(msg) {
         console.error("Critical Error:", msg);
         if (statusDiv) {
-            statusDiv.style.color = "#dc3545"; // 文字を赤くする
+            statusDiv.style.color = "#dc3545";
             statusDiv.innerText = `エラー: ${msg} 再読み込みしてください。`;
         }
         if (!isAlerted) {
@@ -45,7 +46,6 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // バックエンド起動確認
     async function checkBackend() {
         try {
             const res = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=health-check`);
@@ -80,24 +80,50 @@
             statusDiv.style.color = "#888";
             statusDiv.innerText = `ルーム「${roomName}」に接続中...`;
 
-            // バックエンドからトークンを取得
             const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomName}`);
             const { token } = await response.json();
 
             // 1. Context作成
             const context = await SkyWayContext.Create(token);
             
-            // 【安全策】Context側のエラー監視（addが存在するか確認）
-            if (context.onFatalError && typeof context.onFatalError.add === 'function') {
+            // Context側の致命的エラー監視
+            if (context.onFatalError) {
                 context.onFatalError.add(() => notifyError("認証の有効期限が切れました。"));
+            }
+
+            // 【瞬断対策】接続状態の監視ロジック
+            if (context.onConnectionStateChanged) {
+                context.onConnectionStateChanged.add((state) => {
+                    console.log("Connection State:", state);
+
+                    if (state === "Disconnected") {
+                        // 切断されたら「再接続中」表示にして10秒待つ
+                        statusDiv.style.color = "#ffc107"; // オレンジ
+                        statusDiv.innerText = "ネットワーク不安定：再接続を試みています...";
+                        
+                        if (!reconnectionTimer) {
+                            reconnectionTimer = setTimeout(() => {
+                                notifyError("再接続できませんでした。接続が完全に切断されました。");
+                            }, 10000); // 10秒の猶予
+                        }
+                    } else if (state === "Connected") {
+                        // 10秒以内に復旧したらタイマーを止めて正常表示に戻す
+                        if (reconnectionTimer) {
+                            clearTimeout(reconnectionTimer);
+                            reconnectionTimer = null;
+                            statusDiv.style.color = "#888";
+                            statusDiv.innerText = "通話中 Room名 : " + roomName;
+                            console.log("再接続に成功しました。");
+                        }
+                    }
+                });
             }
 
             // 2. Room作成
             const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: roomName });
             
-            // 【安全策】Room側のエラー監視（addが存在するか確認）
-            if (room.onFatalError && typeof room.onFatalError.add === 'function') {
-                room.onFatalError.add(() => notifyError("通信が切断されました。"));
+            if (room.onFatalError) {
+                room.onFatalError.add(() => notifyError("ルーム通信が完全に停止しました。"));
             }
             
             me = await room.join();
@@ -155,7 +181,7 @@
 
         } catch (e) {
             console.error(e);
-            notifyError("接続に失敗しました: " + e.message);
+            notifyError("接続エラー: " + e.message);
             startBtn.style.display = 'inline-block';
             roomNameInput.style.display = 'inline-block';
         }
