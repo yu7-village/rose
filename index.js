@@ -25,22 +25,15 @@
     let isAlerted = false; 
     let reconnectionTimer = null;
 
-    // 強制的にエラーを表示・通知する関数
     function notifyError(msg) {
-        if (isAlerted) return; // 二重アラート防止
+        if (isAlerted) return;
         isAlerted = true;
-        
-        console.error("Critical Application Error:", msg);
+        console.error("Critical Error:", msg);
         if (statusDiv) {
             statusDiv.style.color = "#dc3545";
             statusDiv.innerText = `エラー: ${msg}`;
         }
         alert("【接続エラー】\n" + msg + "\n\nページを再読み込みしてください。");
-        
-        // 通信が死んでいるので、ボタン類をリセット
-        startBtn.style.display = 'inline-block';
-        roomNameInput.style.display = 'inline-block';
-        leaveBtn.style.display = 'none';
     }
 
     async function checkBackend() {
@@ -80,39 +73,28 @@
             const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomName}`);
             const { token } = await response.json();
 
-            // 1. Context作成
             const context = await SkyWayContext.Create(token);
             
-            // --- 接続状態監視の強化 ---
-            if (context.onConnectionStateChanged) {
-                context.onConnectionStateChanged.add((state) => {
-                    console.log("SDK Connection State:", state);
-                    if (state === "Disconnected") {
-                        statusDiv.style.color = "#ffc107";
-                        statusDiv.innerText = "接続中断：再試行中...";
-                        
-                        // ログに出ていた「WebSocket失敗」時の沈黙を防ぐため、
-                        // Disconnectedになったら5秒だけ待って強制的にエラーにする
-                        if (!reconnectionTimer) {
-                            reconnectionTimer = setTimeout(() => {
-                                notifyError("サーバーとの接続が完全に失われました（トークン期限切れの可能性があります）。");
-                            }, 5000); // 猶予を5秒に短縮
-                        }
-                    } else if (state === "Connected") {
-                        if (reconnectionTimer) {
-                            clearTimeout(reconnectionTimer);
-                            reconnectionTimer = null;
-                        }
-                        statusDiv.style.color = "#888";
-                        statusDiv.innerText = "通話中 Room名 : " + roomName;
+            // 接続状態監視
+            context.onConnectionStateChanged.add((state) => {
+                if (state === "Disconnected") {
+                    statusDiv.style.color = "#ffc107";
+                    statusDiv.innerText = "接続中断：再試行中...";
+                    if (!reconnectionTimer) {
+                        reconnectionTimer = setTimeout(() => {
+                            notifyError("サーバーとの接続が失われました。");
+                        }, 5000);
                     }
-                });
-            }
+                } else if (state === "Connected") {
+                    if (reconnectionTimer) {
+                        clearTimeout(reconnectionTimer);
+                        reconnectionTimer = null;
+                    }
+                    statusDiv.style.color = "#888";
+                    statusDiv.innerText = "通話中 Room名 : " + roomName;
+                }
+            });
 
-            // 致命的なエラーは即座に通知
-            context.onFatalError.add((err) => notifyError("致命的な通信エラーが発生しました。"));
-
-            // 2. Room作成
             const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: roomName });
             me = await room.join();
 
@@ -125,29 +107,37 @@
             chatContainer.style.display = 'block';
             updateMemberList(room);
 
-            // ストリーム公開設定
+            // データ通信設定
             const dataStream = await SkyWayStreamFactory.createDataStream();
             dataPublish = await me.publish(dataStream);
 
+            sendBtn.onclick = () => {
+                const text = chatInput.value;
+                if (!text) return;
+                dataStream.write(text);
+                const msg = document.createElement('div');
+                msg.innerHTML = `<strong>自分:</strong> ${text}`;
+                chatMessages.appendChild(msg);
+                chatInput.value = "";
+            };
+
             const subscribe = async (pub) => {
                 if (pub.publisher.id === me.id) return;
-                try {
-                    const { stream } = await me.subscribe(pub.id);
-                    if (pub.contentType === 'video') {
-                        const newVideo = document.createElement('video');
-                        newVideo.id = `video-${pub.publisher.id}`; 
-                        newVideo.autoplay = true;
-                        newVideo.playsInline = true;
-                        stream.attach(newVideo);
-                        videoGrid.appendChild(newVideo);
-                    } else if (pub.contentType === 'data') {
-                        stream.onData.add((data) => {
-                            const msg = document.createElement('div');
-                            msg.innerHTML = `<strong>相手:</strong> ${data}`;
-                            chatMessages.appendChild(msg);
-                        });
-                    }
-                } catch(e) { console.error("Subscribe error:", e); }
+                const { stream } = await me.subscribe(pub.id);
+                if (pub.contentType === 'video') {
+                    const newVideo = document.createElement('video');
+                    newVideo.id = `video-${pub.publisher.id}`; 
+                    newVideo.autoplay = true;
+                    newVideo.playsInline = true;
+                    stream.attach(newVideo);
+                    videoGrid.appendChild(newVideo);
+                } else if (pub.contentType === 'data') {
+                    stream.onData.add((data) => {
+                        const msg = document.createElement('div');
+                        msg.innerHTML = `<strong>相手:</strong> ${data}`;
+                        chatMessages.appendChild(msg);
+                    });
+                }
             };
 
             room.publications.forEach(subscribe);
@@ -158,6 +148,7 @@
                 if (v) v.remove();
             });
 
+            // メディアストリーム公開 (ここがON/OFFに重要)
             const { audio, video } = await SkyWayStreamFactory.createMicrophoneAudioAndCameraStream();
             video.attach(localVideo);
             audioPublish = await me.publish(audio); 
@@ -170,17 +161,35 @@
         }
     };
 
-    leaveBtn.onclick = async () => {
-        try {
-            if (me) await me.leave();
-        } catch (e) {
-            console.warn("Leave error (already disconnected):", e);
+    // --- ここからカメラ・マイクのON/OFFロジック ---
+    videoBtn.onclick = async () => {
+        if (!videoPublish) return;
+        if (videoPublish.state === 'enabled') {
+            await videoPublish.disable();
+            videoBtn.innerText = "カメラOFF中";
+            videoBtn.style.background = "#6c757d";
+        } else {
+            await videoPublish.enable();
+            videoBtn.innerText = "カメラON";
+            videoBtn.style.background = "#28a745";
         }
-        location.reload();
     };
 
-    // その他ボタン(video/audio/send)の処理は前回と同様
-    videoBtn.onclick = async () => { /* ...省略(変更なし)... */ };
-    audioBtn.onclick = async () => { /* ...省略(変更なし)... */ };
-    sendBtn.onclick = () => { /* ...省略(変更なし)... */ };
+    audioBtn.onclick = async () => {
+        if (!audioPublish) return;
+        if (audioPublish.state === 'enabled') {
+            await audioPublish.disable();
+            audioBtn.innerText = "マイクOFF中";
+            audioBtn.style.background = "#6c757d";
+        } else {
+            await audioPublish.enable();
+            audioBtn.innerText = "マイクON";
+            audioBtn.style.background = "#28a745";
+        }
+    };
+
+    leaveBtn.onclick = async () => {
+        try { if (me) await me.leave(); } catch (e) {}
+        location.reload();
+    };
 })();
