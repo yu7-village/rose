@@ -3,82 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkyWay V3 P2P Video Chat</title>
+    <title>SkyWay 1時間制限ルーム</title>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; padding: 20px; margin: 0; }
-        .main-layout { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1200px; gap: 20px; }
-        .controls-wrapper { display: flex; flex-direction: row-reverse; align-items: flex-start; justify-content: center; gap: 20px; width: 100%; flex-wrap: wrap; }
-
-        @media (max-width: 600px) {
-            .controls-wrapper { flex-direction: column; align-items: center; }
-            .button-group { order: 1; width: 100%; align-items: center; }
-            .info-panel { order: 2; width: 100%; max-width: 320px; }
-        }
-
-        .info-panel { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 320px; text-align: left; }
-        .button-group { display: flex; flex-direction: column; gap: 10px; }
-        button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; min-width: 180px; }
+        body { font-family: sans-serif; margin: 20px; background-color: #f8f9fa; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         
-        .server-status { font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .status-lamp { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+        /* ヘッダー・ステータス周り */
+        .status-bar { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding: 10px; background: #eee; border-radius: 5px; flex-wrap: wrap; }
+        .status-lamp { width: 12px; height: 12px; border-radius: 50%; background: #ccc; }
         .status-online { background: #28a745; box-shadow: 0 0 5px #28a745; }
         .status-offline { background: #dc3545; }
-        .status-loading { background: #ffc107; animation: blink 1s infinite; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        #room-timer { font-weight: bold; color: #d63031; font-size: 1.1em; margin-left: auto; }
 
-        #chat-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; }
-        #chat-messages { height: 180px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; font-size: 13px; background: #fafafa; border-radius: 4px; }
-        .chat-input-group { display: flex; gap: 5px; }
-        input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        /* ビデオグリッド */
+        #video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-top: 20px; }
+        video { width: 100%; background: #000; border-radius: 8px; transform: scaleX(-1); }
+        #local-video { border: 3px solid #007bff; }
 
-        .video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; width: 100%; margin-top: 20px; }
-        .video-wrapper { background: #222; border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 4/3; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        .label { position: absolute; bottom: 8px; left: 8px; color: white; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        /* コントロール */
+        .controls { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; }
+        #start-btn { background: #007bff; }
+        #leave-btn { background: #dc3545; display: none; }
+        #toggle-video-btn, #toggle-audio-btn { background: #28a745; display: none; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 200px; }
+
+        /* チャットエリア */
+        #chat-container { margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; display: none; }
+        #chat-messages { height: 150px; overflow-y: auto; padding: 10px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+        .chat-input-area { display: flex; }
+        #chat-input { flex: 1; border: none; padding: 10px; border-radius: 0 0 0 5px; }
+        #send-btn { background: #6c5ce7; border-radius: 0 0 5px 0; }
+
+        /* メンバーリスト */
+        #member-list-container { margin-top: 15px; font-size: 0.85em; color: #666; display: none; }
     </style>
 </head>
 <body>
 
-    <div class="main-layout">
-        <h2>SkyWay Video Chat</h2>
-        <div class="controls-wrapper">
-            <div class="info-panel">
-                <div class="server-status">
-                    <div id="status-lamp" class="status-lamp status-loading"></div>
-                    <span id="server-text">サーバー起動を確認中...</span>
-                </div>
-                <div id="member-list-container" style="display: none; border-top: 1px solid #eee; padding-top: 10px; margin-bottom: 10px;">
-                    <div style="font-size: 13px; color: #555; font-weight: bold;">参加中: <span id="member-count">0</span>名</div>
-                    <div id="member-ids" style="font-size: 11px; color: #888; margin-top: 4px;"></div>
-                </div>
-                <div id="chat-container" style="display: none;">
-                    <div id="chat-messages"></div>
-                    <div class="chat-input-group">
-                        <input type="text" id="chat-input" placeholder="メッセージ...">
-                        <button id="send-btn" style="min-width: auto; padding: 8px 12px; font-size: 12px;">送信</button>
-                    </div>
-                </div>
-            </div>
+<div class="container">
+    <h2>SkyWay ビデオ通話</h2>
 
-            <div class="button-group">
-                <input type="text" id="room-name-input" placeholder="ルーム名を入力（例: room1）" 
-                       style="padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px;">
-                <button id="start-btn">通話を開始する</button>
-                <button id="toggle-video-btn" style="background: #28a745; display: none;">カメラON</button>
-                <button id="toggle-audio-btn" style="background: #28a745; display: none;">マイクON</button>
-                <button id="leave-btn" style="background: #dc3545; display: none;">終了</button>
-                <div id="status" style="font-size: 14px; color: #888; margin-top: 5px; text-align: center; font-weight: bold;">準備完了</div>
-            </div>
-        </div>
-
-        <div class="video-grid" id="video-grid">
-            <div class="video-wrapper">
-                <video id="local-video" autoplay muted playsinline></video>
-                <div class="label">自分 (Local)</div>
-            </div>
+    <div class="status-bar">
+        <div id="status-lamp" class="status-lamp"></div>
+        <span id="server-text">サーバー接続確認中...</span>
+        <span id="status">待機中</span>
+        <div id="id-room-timer-wrapper">
+            <span id="room-timer"></span>
         </div>
     </div>
 
-    <script type="module" src="index.js"></script>
+    <div class="controls">
+        <input type="text" id="room-name-input" placeholder="ルーム名を入力">
+        <button id="start-btn">入室する</button>
+        <button id="toggle-video-btn">カメラON</button>
+        <button id="toggle-audio-btn">マイクON</button>
+        <button id="leave-btn">退室する</button>
+    </div>
+
+    <div id="member-list-container">
+        参加人数: <span id="member-count">0</span>名<br>
+        <div id="member-ids"></div>
+    </div>
+
+    <div id="video-grid">
+        <video id="local-video" autoplay playsinline muted></video>
+    </div>
+
+    <div id="chat-container">
+        <div id="chat-messages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="メッセージを入力...">
+            <button id="send-btn">送信</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="index.js"></script>
 </body>
 </html>

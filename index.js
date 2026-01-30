@@ -21,6 +21,8 @@
     const memberCount = document.getElementById('member-count');
     const memberIdsDiv = document.getElementById('member-ids');
     const memberContainer = document.getElementById('member-list-container');
+    // タイマー表示用要素
+    const timerDiv = document.getElementById('room-timer');
 
     let me; 
     let videoPublish; 
@@ -29,6 +31,7 @@
     let dataStream; 
     let isAlerted = false; 
 
+    // --- 補助関数 ---
     function notifyError(msg) {
         if (isAlerted) return;
         isAlerted = true;
@@ -36,8 +39,28 @@
             statusDiv.style.color = "#dc3545";
             statusDiv.innerText = `終了: ${msg}`;
         }
-        alert("【通知】\n" + msg + "\n\nページを再読み込みしてください。");
+        alert("【お知らせ】\n" + msg);
         location.reload();
+    }
+
+    // カウントダウン処理
+    function startRoomTimer(expireTimeMs) {
+        if (!timerDiv) return;
+        const timerInterval = setInterval(() => {
+            const now = Date.now();
+            const diff = expireTimeMs - now;
+
+            if (diff <= 0) {
+                clearInterval(timerInterval);
+                timerDiv.innerText = "終了時刻になりました";
+                notifyError("制限時間が切れました。お手数ですが、再度ルームに入り直してください。");
+                return;
+            }
+
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            timerDiv.innerText = `ルーム終了まで: ${minutes}分${seconds}秒`;
+        }, 1000);
     }
 
     function appendMessage(sender, text) {
@@ -75,6 +98,7 @@
     }
     checkBackend();
 
+    // --- メイン処理 ---
     startBtn.onclick = async () => {
         const roomName = roomNameInput.value.trim() || "p2p-room";
         isAlerted = false;
@@ -85,29 +109,25 @@
             const response = await fetch(`${BACKEND_URL}/api/skyway-token?roomId=${roomName}`);
             const { token } = await response.json();
 
-            // --- 【確実な判定】トークン有効期限の解析とカウントダウン ---
-            try {
-                const payloadBase64 = token.split('.')[1];
-                const payload = JSON.parse(atob(payloadBase64));
-                const expireTimeInMs = payload.exp * 1000;
-                const remainingTimeMs = expireTimeInMs - Date.now();
-
-                console.log(`制限時間まであと: ${Math.floor(remainingTimeMs / 1000)}秒`);
-
-                if (remainingTimeMs > 0) {
-                    setTimeout(() => {
-                        notifyError("通話の制限時間（設定時間）が終了しました。");
-                    }, remainingTimeMs);
-                } else {
-                    throw new Error("取得したトークンが既に期限切れです。");
-                }
-            } catch (tokenErr) {
-                console.error("Token Analysis Error:", tokenErr);
-            }
-
             const context = await SkyWayContext.Create(token);
             const room = await SkyWayRoom.FindOrCreate(context, { type: 'p2p', name: roomName });
             me = await room.join();
+
+            // --- ルーム終了時刻の同期ロジック ---
+            let roomExpireTime;
+            if (room.members.length === 1) {
+                // 自分が最初の1人目の場合：トークンから終了時刻を抽出してルームに保存
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                roomExpireTime = payload.exp * 1000; //
+                await room.updateMetadata(roomExpireTime.toString()); // ルームデータに保存
+            } else {
+                // 2人目以降：ルームに保存されている終了時刻を読み取る
+                roomExpireTime = parseInt(room.metadata) || (JSON.parse(atob(token.split('.')[1])).exp * 1000);
+            }
+
+            if (roomExpireTime) {
+                startRoomTimer(roomExpireTime); // 全員同じ時刻でカウントダウン開始
+            }
 
             // UI切り替え
             startBtn.style.display = 'none';
@@ -171,6 +191,7 @@
         }
     };
 
+    // カメラ・マイク操作
     videoBtn.onclick = async () => {
         if (!videoPublish) return;
         if (videoPublish.state === 'enabled') {
