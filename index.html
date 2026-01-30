@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkyWay 1時間制限ルーム</title>
+    <title>SkyWay 同期タイマー付き通話</title>
     <style>
         body { font-family: sans-serif; margin: 20px; background-color: #f8f9fa; }
         .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -13,14 +13,21 @@
         .status-lamp { width: 12px; height: 12px; border-radius: 50%; background: #ccc; }
         .status-online { background: #28a745; box-shadow: 0 0 5px #28a745; }
         .status-offline { background: #dc3545; }
+        
+        /* タイマーのデザイン：右側に赤字で表示 */
         #room-timer { font-weight: bold; color: #d63031; font-size: 1.1em; margin-left: auto; }
 
-        /* ビデオグリッド */
+        /* ビデオグリッド：反転なしの設定 */
         #video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-top: 20px; }
-        video { width: 100%; background: #000; border-radius: 8px; transform: scaleX(-1); }
+        video { 
+            width: 100%; 
+            background: #000; 
+            border-radius: 8px; 
+            /* 反転設定は削除しました */
+        }
         #local-video { border: 3px solid #007bff; }
 
-        /* コントロール */
+        /* コントロールボタン */
         .controls { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
         button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; }
         #start-btn { background: #007bff; }
@@ -48,9 +55,7 @@
         <div id="status-lamp" class="status-lamp"></div>
         <span id="server-text">サーバー接続確認中...</span>
         <span id="status">待機中</span>
-        <div id="id-room-timer-wrapper">
-            <span id="room-timer"></span>
-        </div>
+        <span id="room-timer"></span>
     </div>
 
     <div class="controls">
