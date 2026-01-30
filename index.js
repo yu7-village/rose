@@ -183,7 +183,7 @@
                 if (v) v.remove();
             });
 
-            statusDiv.innerText = "通話中: " + roomName;
+            statusDiv.innerText = "通話中Room名: " + roomName;
 
         } catch (e) {
             console.error(e);
