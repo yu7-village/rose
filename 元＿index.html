@@ -4,47 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SkyWay 同期タイマー付き通話</title>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         body { font-family: sans-serif; margin: 20px; background-color: #f8f9fa; }
         .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         
+        /* ヘッダー・ステータス周り */
         .status-bar { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding: 10px; background: #eee; border-radius: 5px; flex-wrap: wrap; }
         .status-lamp { width: 12px; height: 12px; border-radius: 50%; background: #ccc; }
         .status-online { background: #28a745; box-shadow: 0 0 5px #28a745; }
         .status-offline { background: #dc3545; }
         
+        /* タイマーのデザイン：右側に赤字で表示 */
         #room-timer { font-weight: bold; color: #d63031; font-size: 1.1em; margin-left: auto; }
 
+        /* ビデオグリッド：反転なしの設定 */
         #video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 10px; margin-top: 20px; }
-        video { width: 100%; background: #000; border-radius: 8px; }
+        video { 
+            width: 100%; 
+            background: #000; 
+            border-radius: 8px; 
+            /* 反転設定は削除しました */
+        }
         #local-video { border: 3px solid #007bff; }
 
-        /* コントロールボタン：横並び設定 */
-        .controls { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        /* コントロールボタン */
+        .controls { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
         button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; }
-        
         #start-btn { background: #007bff; }
         #leave-btn { background: #dc3545; display: none; }
         #toggle-video-btn, #toggle-audio-btn { background: #28a745; display: none; }
-        
-        /* 追加機能ボタンのデザイン */
-        .btn-servo1 { background: #4CAF50; } 
-        .btn-servo2 { background: #2196F3; } 
-        .btn-servo3 { background: #f44336; }
-
         input { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 200px; }
 
+        /* チャットエリア */
         #chat-container { margin-top: 20px; border: 1px solid #ccc; border-radius: 5px; display: none; }
         #chat-messages { height: 150px; overflow-y: auto; padding: 10px; border-bottom: 1px solid #eee; font-size: 0.9em; }
         .chat-input-area { display: flex; }
         #chat-input { flex: 1; border: none; padding: 10px; border-radius: 0 0 0 5px; }
         #send-btn { background: #6c5ce7; border-radius: 0 0 5px 0; }
 
+        /* メンバーリスト */
         #member-list-container { margin-top: 15px; font-size: 0.85em; color: #666; display: none; }
-        
-        /* MQTT接続状態の表示用 */
-        #mqtt-info { font-size: 0.8em; color: #666; margin-left: 10px; }
     </style>
 </head>
 <body>
@@ -56,7 +55,6 @@
         <div id="status-lamp" class="status-lamp"></div>
         <span id="server-text">サーバー接続確認中...</span>
         <span id="status">待機中</span>
-        <span id="mqtt-info">MQTT接続中...</span>
         <span id="room-timer"></span>
     </div>
 
@@ -66,10 +64,6 @@
         <button id="toggle-video-btn">カメラON</button>
         <button id="toggle-audio-btn">マイクON</button>
         <button id="leave-btn">退室する</button>
-        
-        <button id="servo-1" class="btn-servo1">動作 1 (30度)</button>
-        <button id="servo-2" class="btn-servo2">動作 2 (60度)</button>
-        <button id="servo-3" class="btn-servo3">動作 3 (90度)</button>
     </div>
 
     <div id="member-list-container">
@@ -89,25 +83,6 @@
         </div>
     </div>
 </div>
-
-<script>
-    const MQTT_TOPIC = "rnubnxuhbtdjsm-un-siewuchtus-2026/nudjx";
-    const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt');
-
-    mqttClient.on('connect', () => {
-        document.getElementById('mqtt-info').innerText = "MQTT：オンライン";
-    });
-
-    function sendCommand(num) {
-        mqttClient.publish(MQTT_TOPIC, num.toString());
-        console.log("MQTT Sent:", num);
-    }
-
-    // 各ボタンに機能を割り当て
-    document.getElementById('servo-1').onclick = () => sendCommand(1);
-    document.getElementById('servo-2').onclick = () => sendCommand(2);
-    document.getElementById('servo-3').onclick = () => sendCommand(3);
-</script>
 
 <script type="module" src="index.js"></script>
 </body>
