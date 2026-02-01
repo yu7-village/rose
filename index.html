@@ -20,7 +20,7 @@
         video { width: 100%; background: #000; border-radius: 8px; }
         #local-video { border: 3px solid #007bff; }
 
-        /* コントロールボタン：横並び設定 */
+        /* コントロールボタン */
         .controls { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; color: white; font-weight: bold; }
         
@@ -28,6 +28,9 @@
         #leave-btn { background: #dc3545; display: none; }
         #toggle-video-btn, #toggle-audio-btn { background: #28a745; display: none; }
         
+        /* 動作ボタン専用のコンテナ（横並び設定） */
+        .servo-controls { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+
         /* 追加機能ボタンのデザイン */
         .btn-servo1 { background: #4CAF50; } 
         .btn-servo2 { background: #2196F3; } 
@@ -43,7 +46,6 @@
 
         #member-list-container { margin-top: 15px; font-size: 0.85em; color: #666; display: none; }
         
-        /* MQTT接続状態の表示用 */
         #mqtt-info { font-size: 0.8em; color: #666; margin-left: 10px; }
     </style>
 </head>
@@ -66,10 +68,6 @@
         <button id="toggle-video-btn">カメラON</button>
         <button id="toggle-audio-btn">マイクON</button>
         <button id="leave-btn">退室する</button>
-        
-        <button id="servo-1" class="btn-servo1">動作 1 (30度)</button>
-        <button id="servo-2" class="btn-servo2">動作 2 (60度)</button>
-        <button id="servo-3" class="btn-servo3">動作 3 (90度)</button>
     </div>
 
     <div id="member-list-container">
@@ -79,6 +77,12 @@
 
     <div id="video-grid">
         <video id="local-video" autoplay playsinline muted></video>
+    </div>
+
+    <div class="servo-controls">
+        <button id="servo-1" class="btn-servo1">動作 1 (30度)</button>
+        <button id="servo-2" class="btn-servo2">動作 2 (60度)</button>
+        <button id="servo-3" class="btn-servo3">動作 3 (90度)</button>
     </div>
 
     <div id="chat-container">
@@ -103,7 +107,6 @@
         console.log("MQTT Sent:", num);
     }
 
-    // 各ボタンに機能を割り当て
     document.getElementById('servo-1').onclick = () => sendCommand(1);
     document.getElementById('servo-2').onclick = () => sendCommand(2);
     document.getElementById('servo-3').onclick = () => sendCommand(3);
